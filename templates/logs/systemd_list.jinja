@@ -1,0 +1,103 @@
+<div class="row">
+<div class="col-md-12">
+<h2 class="az-dashboard-title">{{title}}</h2>
+  </div>
+
+  <div class="col-md-12">
+    <div class="card">
+    
+      <div class="card-body">
+
+          
+                       <form action="/logs/systemd/{{service.ID}}?page={{page}}" method="GET">     
+          <div style="display:grid;grid-template-columns: 1fr 1fr 1fr;margin-bottom:10px;">
+                  
+                      <div>
+                        <select name="log_level" class="form-control">
+                            <option value="" {% if log_level == "" %} selected {% endif %}>All Logs</option>
+                            <option value="info" {% if log_level == "info" %} selected {% endif %}>Info logs</option>
+                            <option value="error" {% if log_level == "error" %} selected {% endif %}>Error logs</option>
+                        </select>
+                        </div>
+
+                        <div>
+                        <button type="Filter" class="btn btn-lg btn-default">
+                          <i class="fa fa-search"></i>
+                        </button>
+                        </div>
+                        <div>
+                             {% if service.Status == STATUS_QUEUED or service.Status == STATUS_RUNNING %}
+                            <img src="/static/img/loader.gif" style="max-width:50px" /> build in progress.
+                            <script>
+                                setTimeout(function() {
+                                    window.location.reload();
+                                }, 10000)
+                            </script>
+                            {% endif %}
+                        </div>
+          </div>
+   
+                
+                  </form>  
+
+
+        <table class="table table-bordered">
+          <thead>
+            <tr>
+              <th>Summary</th>
+              <th>Log Level</th>
+              <th>Full Log</th>
+              <th>Date & Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for log in logs %}
+            <tr>
+              <td>{{log.LogSummary}}</td>
+              <td>
+                {% if log.LogLevel == "Info" %}
+                <i
+                  class="fa fa-check-circle"
+                  aria-hidden="true"
+                  style="color: green"
+                ></i>
+                {% else %}
+                <i
+                  class="fa fa-exclamation-circle"
+                  aria-hidden="true"
+                  style="color: red"
+                ></i>
+                {% endif %}
+              </td>
+              <td><a href="/log/full/systemd/{{log.ID}}" target="_blank">View</a></td>
+              <td>{{log.CreatedAt}}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card-footer clearfix">
+        <ul class="pagination pagination-sm m-0 float-right">
+          {% if prevPage > 0 %}
+          <li class="page-item">
+            <a
+              class="page-link"
+              href="/logs/systemd/{{service.ID}}?page={{prevPage}}{{logLevelQuery}}"
+              ><< Prev</a
+            >
+          </li>
+          {% endif %}
+
+          <li class="page-item">
+            <a
+              class="page-link"
+              href="/logs/systemd/{{service.ID}}?page={{nextPage}}{{logLevelQuery}}"
+              >Next >></a
+            >
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>

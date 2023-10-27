@@ -121,6 +121,8 @@ func main() {
 	router.GET("/logs/site/:id", controller.SiteLogs)
 	router.GET("/logs/cron/:id", controller.CronLogs)
 	router.GET("/log/full/cron/:id", controller.CronLogView)
+	router.GET("/logs/systemd/:id", controller.SystemdLogs)
+	router.GET("/log/full/systemd/:id", controller.SystemdLogView)
 
 	router.GET("/servers", controller.Servers)
 	router.Any("/server/create/:servertype", controller.CreateServer)
@@ -156,6 +158,8 @@ func main() {
 	router.POST("/cron/retrybuild", controller.RetryCronBuild)
 
 	router.GET("/systemd/services/:id/list", controller.ListServices)
+	router.GET("/systemd/services/:id/create", controller.CreateService)
+	router.POST("/systemd/services/save/:id/", controller.SaveService)
 
 	router.GET("/guide", controller.ShowGuide)
 

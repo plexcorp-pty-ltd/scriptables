@@ -1,7 +1,7 @@
 
     <div class="row">
     <div class="col-md-12 mb-3">
-<h2 class="az-dashboard-title">{{title}}        &nbsp;&nbsp; <a href="/systemd/services/create" title="Add Queue Worker">
+<h2 class="az-dashboard-title">{{title}}        &nbsp;&nbsp; <a href="/systemd/services/{{site.ID}}/create" title="Add New Daemon">
 <i class="fa fa-plus" style="color:#67707c;font-size:1.2rem"></i>
         </a></h2>
   </div>
@@ -32,7 +32,7 @@
                     <tr>
                       <th>Name</th>
                       <th>Status</th>
-                      <th>Scriptable</th>
+                      <th>Scriptables</th>
                       <th>Command</th>
                       <th>Updated at</th>
                       <th>Actions</th>
@@ -96,7 +96,7 @@
                       </form>
                     {% endif %}
 
-                     <a href="/systemd/services/{{s.ID}}"><img src="/static/icons/log.png" 
+                     <a href="/logs/systemd/{{s.ID}}"><img src="/static/icons/log.png" 
                      alt="View Log" title="View Log" style="max-height:28px;" /></a>
 
 

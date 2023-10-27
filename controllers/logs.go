@@ -175,3 +175,61 @@ func (c *Controller) CronLogView(gctx *gin.Context) {
 	}, gctx)
 
 }
+
+func (c *Controller) SystemdLogs(gctx *gin.Context) {
+	sid, _ := strconv.ParseInt(gctx.Param("id"), 10, 64)
+	page, err := strconv.Atoi(gctx.Query("page"))
+	sessUser := c.GetSessionUser(gctx)
+
+	if err != nil {
+		page = 1
+	}
+
+	perPage, err := strconv.Atoi(gctx.Query("perPage"))
+	if err != nil {
+		perPage = 20
+	}
+
+	logLevel := gctx.Query("log_level")
+	logLevelQuery := ""
+	if logLevel != "" {
+		logLevelQuery = "&log_level=" + logLevel
+	}
+
+	logs := models.GetOperationLogs(c.GetDB(gctx), page, perPage, "systemd", sid, logLevel, sessUser.TeamId)
+
+	var service models.SystemdService
+	c.GetDB(gctx).Where("id=? and team_id=?", sid, sessUser.TeamId).Find(&service)
+	vars := gonja.Context{
+		"title":         "Systemd logs for: " + service.Name,
+		"logs":          logs,
+		"log_level":     logLevel,
+		"nextPage":      page + 1,
+		"prevPage":      page - 1,
+		"service":       service,
+		"logLevelQuery": logLevelQuery,
+		"highlight":     "sites",
+	}
+
+	c.Render("logs/systemd_list", vars, gctx)
+}
+
+func (c *Controller) SystemdLogView(gctx *gin.Context) {
+	sid, _ := strconv.ParseInt(gctx.Param("id"), 10, 64)
+	sessUser := c.GetSessionUser(gctx)
+
+	var log models.OperationLog
+	c.GetDB(gctx).Where("id = ? and entity='systemd' and team_id=?", sid, sessUser.TeamId).First(&log)
+	log.Log = utils.Decrypt(log.Log)
+
+	if log.ID == 0 {
+		c.FlashError(gctx, "Sorry, log not found.")
+		gctx.Redirect(http.StatusFound, "/sites")
+	}
+
+	c.RenderWithoutLayout("logs/view_log", gonja.Context{
+		"log":       log.Log,
+		"highlight": "sites",
+	}, gctx)
+
+}

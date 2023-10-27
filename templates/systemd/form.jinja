@@ -1,0 +1,52 @@
+<div class="row">
+<div class="col-md-12">
+<h2 class="az-dashboard-title">{{title}}</h2>
+  </div>
+
+    <div class="col-md-12">
+      <div class="card card-info">
+  
+        <form class="form-horizontal" method="post" action="/systemd/services/save/{{site.ID}}/">
+          <div class="card-body">
+  
+
+            <div class="form-group row">
+              <label class="col-sm-2 col-form-label"
+                >Worker Name*</label
+              >
+              <div class="col-sm-10">
+                  <input class="form-control" required name="name" value="{{name}}" />
+              </div>
+            </div>
+
+            <div class="form-group row">
+                <label class="col-sm-2 col-form-label"
+                  >Scriptables</label
+                >
+                <div class="col-sm-10">
+                    <input class="form-control" required name="scriptables" value="{{scriptables}}" />
+                </div>
+              </div>
+  
+
+
+            <div class="form-group row">
+                <label class="col-sm-2 col-form-label"
+                  >Artisan Command</label
+                >
+                <div class="col-sm-10">
+                    <input class="form-control" required name="command" value="{{command}}" />
+                </div>
+              </div>
+
+          </div>
+  
+          <div class="card-footer">
+            <button type="submit" class="btn btn-primary">SAVE</button>
+  
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  
