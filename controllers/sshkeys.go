@@ -59,12 +59,12 @@ func (c *Controller) EditSShKey(gctx *gin.Context) {
 }
 
 func (c *Controller) SaveSShKey(gctx *gin.Context) {
-	privateKey := gctx.PostForm("private_key")
-	publicKey := gctx.PostForm("public_key")
-	passphrase := gctx.PostForm("passphrase")
-	sshkeyId, _ := strconv.ParseInt(gctx.PostForm("sshkey_id"), 10, 64)
+	privateKey := gctx.FormValue("private_key")
+	publicKey := gctx.FormValue("public_key")
+	passphrase := gctx.FormValue("passphrase")
+	sshkeyId, _ := strconv.ParseInt(gctx.FormValue("sshkey_id"), 10, 64)
 
-	name := gctx.PostForm("name")
+	name := gctx.FormValue("name")
 
 	ctx := gonja.Context{
 

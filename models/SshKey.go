@@ -18,19 +18,19 @@ type SshKey struct {
 	TeamId     int64     `gorm:"column:team_id"`
 }
 
-func GetSshKeysList(db *gorm.DB, page int, perPage int, search string, teamId int64) []SshKey {
+func GetSshKeysList(page int, perPage int, search string, teamId int64) []SshKey {
 	offset := (page - 1) * perPage
 	var keys []SshKey
 
 	if search != "" {
-		db.Limit(perPage).Offset(offset).Where(
+		GetDB().Limit(perPage).Offset(offset).Where(
 			"name LIKE ? and team_id=?",
 			"%"+search+"%",
 			teamId,
 		).Find(&keys)
 
 	} else {
-		db.Limit(perPage).Offset(offset).Where("team_id=?", teamId).Find(&keys)
+		GetDB().Limit(perPage).Offset(offset).Where("team_id=?", teamId).Find(&keys)
 	}
 
 	return keys

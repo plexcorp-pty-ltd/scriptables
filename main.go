@@ -4,14 +4,13 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
+	"github.com/gorilla/sessions"
+	"github.com/labstack/echo"
+	"github.com/labstack/echo-contrib/session"
 	"plexcorp.tech/scriptable/console"
 	"plexcorp.tech/scriptable/controllers"
-	"plexcorp.tech/scriptable/middleware"
 	"plexcorp.tech/scriptable/models"
 )
 
@@ -76,23 +75,9 @@ func main() {
 	)
 
 	os.Setenv("MYSQL_DSN", mysqlDSN)
-	router := gin.Default()
-	router.StaticFS("/static", http.Dir("./static"))
-
-	allowedIps := os.Getenv("allowed_ips")
-	router.SetTrustedProxies(strings.Split(allowedIps, ","))
-
-	router.Use(middleware.DBMiddleware())
-	router.Use(middleware.SetupSession())
-	router.Use(middleware.AuthMiddleware())
-	router.Use(func(c *gin.Context) {
-		c.Next()
-		db := c.MustGet("db").(*gorm.DB)
-		sqlDB, err := db.DB()
-		if err == nil {
-			defer sqlDB.Close()
-		}
-	})
+	router := echo.New()
+	router.Use(session.Middleware(sessions.NewCookieStore([]byte(os.Getenv("SESSION_KEY")))))
+	router.Static("/static", http.Dir("./static"))
 
 	controller := controllers.Controller{}
 	router.GET("/trial-expired", controller.TrialExpired)
@@ -161,6 +146,6 @@ func main() {
 
 	router.GET("/webhooks/deploy/:sid/:token", controller.DeployWebhookSite)
 
-	router.Run(os.Getenv("SCRIPTABLES_SERVER_DSN_HOST") + ":" + os.Getenv("SCRIPTABLES_SERVER_DSN_PORT"))
+	router.StartAutoTLS(os.Getenv("SCRIPTABLES_SERVER_DSN_HOST") + ":" + os.Getenv("SCRIPTABLES_SERVER_DSN_PORT"))
 
 }

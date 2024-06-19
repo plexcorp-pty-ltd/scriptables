@@ -7,30 +7,30 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 	"github.com/noirbizarre/gonja"
 	"plexcorp.tech/scriptable/models"
 	"plexcorp.tech/scriptable/utils"
 )
 
-func (c *Controller) CreateCron(gctx *gin.Context) {
+func (c *Controller) CreateCron(gctx echo.Context) error {
 	var countServers int64
 	sessUser := c.GetSessionUser(gctx)
 
 	c.GetDB(gctx).Table("servers").Where(
 		"status=? and team_id=?", models.STATUS_COMPLETE, sessUser.TeamId).Count(&countServers)
 	if countServers == 0 {
-		c.Render("general/warning", gonja.Context{
+		return c.Render("general/warning", gonja.Context{
 			"title":      "No active servers found",
 			"highlight":  "crons",
 			"warningMsg": "Please setup a server <a href=\"/\"> here</a> first before trying to setup crons. If you have already done so - please wait for the server build to finish first.",
 		}, gctx)
-
-		return
 	}
+
 	servers := []models.Server{}
 	c.GetDB(gctx).Where("team_id=?", sessUser.TeamId).Find(&servers)
 
-	c.Render("crons/form", gonja.Context{
+	return c.Render("crons/form", gonja.Context{
 		"title":           "Setup cron",
 		"cron_expression": "* * * * *",
 		"task":            "",
@@ -45,14 +45,14 @@ func (c *Controller) CreateCron(gctx *gin.Context) {
 
 }
 
-func (c *Controller) SaveCron(gctx *gin.Context) {
+func (c *Controller) SaveCron(gctx echo.Context) error {
 	sessUser := c.GetSessionUser(gctx)
 
-	user := gctx.PostForm("user")
-	task := gctx.PostForm("task")
-	cron_expression := gctx.PostForm("cron_expression")
-	cron_name := gctx.PostForm("cron_name")
-	server_id, _ := strconv.ParseInt(gctx.PostForm("server_id"), 10, 64)
+	user := gctx.FormValue("user")
+	task := gctx.FormValue("task")
+	cron_expression := gctx.FormValue("cron_expression")
+	cron_name := gctx.FormValue("cron_name")
+	server_id, _ := strconv.ParseInt(gctx.FormValue("server_id"), 10, 64)
 	errors := []string{}
 	servers := []models.Server{}
 	c.GetDB(gctx).Where("team_id=?", sessUser.TeamId).Find(&servers)
@@ -187,11 +187,11 @@ func (c *Controller) EditCron(gctx *gin.Context) {
 }
 
 func (c *Controller) UpdateCron(gctx *gin.Context) {
-	user := gctx.PostForm("user")
-	task := gctx.PostForm("task")
-	cron_expression := gctx.PostForm("cron_expression")
-	cron_name := gctx.PostForm("cron_name")
-	server_id, _ := strconv.ParseInt(gctx.PostForm("server_id"), 10, 64)
+	user := gctx.FormValue("user")
+	task := gctx.FormValue("task")
+	cron_expression := gctx.FormValue("cron_expression")
+	cron_name := gctx.FormValue("cron_name")
+	server_id, _ := strconv.ParseInt(gctx.FormValue("server_id"), 10, 64)
 	errors := []string{}
 	servers := []models.Server{}
 	sessUser := c.GetSessionUser(gctx)
@@ -266,7 +266,7 @@ func (c *Controller) UpdateCron(gctx *gin.Context) {
 }
 
 func (c *Controller) DisableCron(gctx *gin.Context) {
-	cronId, _ := strconv.ParseInt(gctx.PostForm("id"), 10, 64)
+	cronId, _ := strconv.ParseInt(gctx.FormValue("id"), 10, 64)
 	sessUser := c.GetSessionUser(gctx)
 
 	if cronId == 0 {
@@ -282,7 +282,7 @@ func (c *Controller) DisableCron(gctx *gin.Context) {
 }
 
 func (c *Controller) RetryCronBuild(gctx *gin.Context) {
-	retryBuild := gctx.PostForm("retryBuildId")
+	retryBuild := gctx.FormValue("retryBuildId")
 	sessUser := c.GetSessionUser(gctx)
 	updated := false
 

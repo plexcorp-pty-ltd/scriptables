@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"strings"
 
-	"gorm.io/gorm"
 	"plexcorp.tech/scriptable/sshclient"
 )
 
@@ -59,7 +58,7 @@ func GetRules(client *sshclient.Client) ([]string, error) {
 	return firewall_rules, err
 }
 
-func DeleteFirewallRule(db *gorm.DB, server *ServerWithSShKey, ruleNumber int64, rule string) error {
+func DeleteFirewallRule(server *ServerWithSShKey, ruleNumber int64, rule string) error {
 	client, err := GetSSHClient(server, false)
 	if err != nil {
 		return err
@@ -68,14 +67,14 @@ func DeleteFirewallRule(db *gorm.DB, server *ServerWithSShKey, ruleNumber int64,
 	cmd := fmt.Sprintf(" echo \"y\" | sudo ufw delete %d", ruleNumber)
 	out, err := client.Script(cmd).SmartOutput()
 	if err == nil {
-		LogInfo(db, server.ID, "server", string(out), fmt.Sprintf(
+		LogInfo(server.ID, "server", string(out), fmt.Sprintf(
 			"Deleted firewall rule number: %d, rule: %s", ruleNumber, rule), server.TeamId)
 	}
 
 	return err
 }
 
-func AddFirewallRule(db *gorm.DB, server *ServerWithSShKey, rule string) error {
+func AddFirewallRule(server *ServerWithSShKey, rule string) error {
 	client, err := GetSSHClient(server, false)
 	if err != nil {
 		return err
@@ -85,9 +84,9 @@ func AddFirewallRule(db *gorm.DB, server *ServerWithSShKey, rule string) error {
 	fmt.Println(cmd)
 	out, err := client.Script(cmd).SmartOutput()
 	if err == nil {
-		LogInfo(db, server.ID, "server", string(out), fmt.Sprintf("Added firewall rule: %s", rule), server.TeamId)
+		LogInfo(server.ID, "server", string(out), fmt.Sprintf("Added firewall rule: %s", rule), server.TeamId)
 	} else {
-		LogError(db, server.ID, "server", string(out), fmt.Sprintf("Failed adding firewall rule: %s", rule), server.TeamId)
+		LogError(server.ID, "server", string(out), fmt.Sprintf("Failed adding firewall rule: %s", rule), server.TeamId)
 	}
 
 	return err

@@ -31,11 +31,11 @@ type FailedLogins struct {
 	AttemptedUserName string    `gorm:"column:attempted_user_name;type:varchar(100)"`
 }
 
-func Authenticate(db *gorm.DB, email string, password string, IPAddress string) (User, error) {
+func Authenticate(email string, password string, IPAddress string) (User, error) {
 
 	var totalTries int64
 	fiveMinutesAgo := time.Now().Add(-5 * time.Minute)
-	db.Table("failed_logins").
+	GetDB().Table("failed_logins").
 		Where("ip_address = ? AND created_at >= ?", IPAddress, fiveMinutesAgo).
 		Count(&totalTries)
 
@@ -44,7 +44,7 @@ func Authenticate(db *gorm.DB, email string, password string, IPAddress string) 
 	}
 
 	var user User
-	db.Where("email =? AND verified = 1", email).First(&user)
+	GetDB().Where("email =? AND verified = 1", email).First(&user)
 
 	if user.ID != 0 && utils.CheckPasswordHash(password, user.Password) {
 		return user, nil
@@ -56,24 +56,24 @@ func Authenticate(db *gorm.DB, email string, password string, IPAddress string) 
 		AttemptedUserName: email,
 	}
 
-	db.Create(&failedAttempt)
+	GetDB().Create(&failedAttempt)
 
 	return User{}, fmt.Errorf("Sorry, login failed - please try again.")
 }
 
-func IsValidEmail(db *gorm.DB, email string, IPAddress string) bool {
+func IsValidEmail(email string, IPAddress string) bool {
 	var user User
-	db.Where("email =?", email).First(&user)
+	GetDB().Where("email =?", email).First(&user)
 	return user.Email == email
 }
 
-func SendPasswordResetToken(db *gorm.DB, email string, subject string, template string) {
+func SendPasswordResetToken(email string, subject string, template string) {
 
 	token := utils.GenToken()
-	db.Table("users").Where("email =?", email).Update("reset_token", token)
+	GetDB().Table("users").Where("email =?", email).Update("reset_token", token)
 
 	var user User
-	db.Table("users").Where("email =?", email).First(&user)
+	GetDB().Table("users").Where("email =?", email).First(&user)
 	vars := gonja.Context{
 		"subject": subject,
 		"name":    user.Name,
@@ -84,28 +84,28 @@ func SendPasswordResetToken(db *gorm.DB, email string, subject string, template 
 	utils.SendEmail(subject, "", []string{user.Email}, vars, template)
 }
 
-func GetUserById(db *gorm.DB, id int64) User {
+func GetUserById(id int64) User {
 	var user User
-	db.Where("id=?", id).First(&user)
+	GetDB().Where("id=?", id).First(&user)
 	return user
 }
 
-func GetUserByEmailToken(db *gorm.DB, email string, token string) User {
+func GetUserByEmailToken(email string, token string) User {
 	var user User
-	db.Where("email =? AND reset_token != '' AND reset_token = ?", email, token).First(&user)
+	GetDB().Where("email =? AND reset_token != '' AND reset_token = ?", email, token).First(&user)
 	return user
 }
 
-func UpdateUserPassword(db *gorm.DB, user *User) {
-	db.Save(user)
+func UpdateUserPassword(user *User) {
+	GetDB().Save(user)
 }
 
-func GetUsersList(db *gorm.DB, page int, perPage int, search string, teamId int64) []User {
+func GetUsersList(page int, perPage int, search string, teamId int64) []User {
 	offset := (page - 1) * perPage
 	var users []User
 
 	if search != "" {
-		db.Limit(perPage).Offset(offset).Where(
+		GetDB().Limit(perPage).Offset(offset).Where(
 			"(email LIKE ? OR name LIKE ?) AND team_id=?",
 			"%"+search+"%",
 			"%"+search+"%",
@@ -113,16 +113,16 @@ func GetUsersList(db *gorm.DB, page int, perPage int, search string, teamId int6
 		).Find(&users)
 
 	} else {
-		db.Limit(perPage).Where("team_id=?", teamId).Offset(offset).Find(&users)
+		GetDB().Limit(perPage).Where("team_id=?", teamId).Offset(offset).Find(&users)
 	}
 
 	return users
 }
 
-func ToggleUserStatus(db *gorm.DB, userId int64, userStatus int, teamId int64) error {
-	db.Table("users").Where("id=? and team_id=?", userId, teamId).Update("verified", userStatus)
+func ToggleUserStatus(userId int64, userStatus int, teamId int64) error {
+	GetDB().Table("users").Where("id=? and team_id=?", userId, teamId).Update("verified", userStatus)
 	var updated int64
-	db.Table("users").Where("id=? and verified=? and team_id=?", userId, userStatus, teamId).Count(&updated)
+	GetDB().Table("users").Where("id=? and verified=? and team_id=?", userId, userStatus, teamId).Count(&updated)
 	if updated == 1 {
 		return nil
 	}

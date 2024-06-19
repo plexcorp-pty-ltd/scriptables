@@ -34,9 +34,9 @@ func (c *Controller) MyProfile(gctx *gin.Context) {
 }
 
 func (c *Controller) UpdateProfile(gctx *gin.Context) {
-	email := strings.Trim(gctx.PostForm("email"), " ")
-	name := strings.Trim(gctx.PostForm("name"), " ")
-	twoFactor := strings.Trim(gctx.PostForm("two_factor"), " ")
+	email := strings.Trim(gctx.FormValue("email"), " ")
+	name := strings.Trim(gctx.FormValue("name"), " ")
+	twoFactor := strings.Trim(gctx.FormValue("two_factor"), " ")
 
 	session := sessions.Default(gctx)
 	userID := session.Get("user_id")
@@ -112,8 +112,8 @@ func (c *Controller) CheckLogin(gctx *gin.Context) {
 
 	vars["errors"] = []string{}
 
-	email := strings.Trim(gctx.PostForm("email"), " ")
-	password := strings.Trim(gctx.PostForm("password"), " ")
+	email := strings.Trim(gctx.FormValue("email"), " ")
+	password := strings.Trim(gctx.FormValue("password"), " ")
 	if email == "" || password == "" {
 		vars["errors"] = []string{"Please enter a valid email address and password."}
 	}
@@ -168,9 +168,9 @@ func (c *Controller) TwoFactorAuthenticate(gctx *gin.Context) {
 
 	vars["errors"] = []string{}
 
-	email := strings.Trim(gctx.PostForm("email"), " ")
-	password := strings.Trim(gctx.PostForm("password"), " ")
-	twoFactorCode := strings.Trim(gctx.PostForm("two_factor_code"), " ")
+	email := strings.Trim(gctx.FormValue("email"), " ")
+	password := strings.Trim(gctx.FormValue("password"), " ")
+	twoFactorCode := strings.Trim(gctx.FormValue("two_factor_code"), " ")
 
 	if twoFactorCode == "" {
 		vars["errors"] = []string{"Invalid two factor code entered."}
@@ -252,7 +252,7 @@ func (c *Controller) ForgotPassword(gctx *gin.Context) {
 			gctx.Redirect(http.StatusFound, "/users/login")
 			return
 		}
-		email := gctx.PostForm("email")
+		email := gctx.FormValue("email")
 		isValidEmail := models.IsValidEmail(c.GetDB(gctx), email, gctx.Request.RemoteAddr)
 
 		if isValidEmail {
@@ -282,9 +282,9 @@ func (c *Controller) ChangePassword(gctx *gin.Context) {
 			gctx.Redirect(http.StatusFound, "/users/login")
 			return
 		}
-		email := gctx.PostForm("email")
-		password := gctx.PostForm("password")
-		passwordAgain := gctx.PostForm("passwordAgain")
+		email := gctx.FormValue("email")
+		password := gctx.FormValue("password")
+		passwordAgain := gctx.FormValue("passwordAgain")
 		if password != passwordAgain {
 			hasErrors = true
 			vars["errors"] = []string{"Ooops!, password and confirm password do not match. Please try again."}
@@ -355,8 +355,8 @@ func (c *Controller) ListUsers(gctx *gin.Context) {
 }
 
 func (c *Controller) HandleUserActionsFormPost(gctx *gin.Context) {
-	action := gctx.PostForm("action")
-	id, err := strconv.ParseInt(gctx.PostForm("user_id"), 10, 64)
+	action := gctx.FormValue("action")
+	id, err := strconv.ParseInt(gctx.FormValue("user_id"), 10, 64)
 	sessUser := c.GetSessionUser(gctx)
 	if err != nil {
 		c.FlashError(gctx, "Sorry, failed to read user ID. Please try again.")
@@ -374,12 +374,12 @@ func (c *Controller) HandleUserActionsFormPost(gctx *gin.Context) {
 			c.FlashSuccess(gctx, "Successfully enabled users access.")
 		}
 	} else if action == "sendpassword" {
-		email := gctx.PostForm("user_email")
+		email := gctx.FormValue("user_email")
 		models.SendPasswordResetToken(c.GetDB(gctx), email, "Password reset request", "forgotpassword")
 		c.FlashSuccess(gctx, "Successfully sent user a password reset mail.")
 	} else if action == "newuser" {
-		email := strings.Trim(gctx.PostForm("email"), " ")
-		name := strings.Trim(gctx.PostForm("name"), " ")
+		email := strings.Trim(gctx.FormValue("email"), " ")
+		name := strings.Trim(gctx.FormValue("name"), " ")
 
 		if email == "" || name == "" || !strings.Contains(email, "@") || len(name) < 3 {
 			c.FlashError(gctx, "Email and name are both required.")
@@ -429,11 +429,11 @@ func (c *Controller) RegisterForm(gctx *gin.Context) {
 }
 
 func (c *Controller) RegistrationComplete(gctx *gin.Context) {
-	email := gctx.PostForm("email")
-	password := gctx.PostForm("password")
-	name := gctx.PostForm("name")
-	team := gctx.PostForm("team")
-	passwordConfirmation := gctx.PostForm("password_confirm")
+	email := gctx.FormValue("email")
+	password := gctx.FormValue("password")
+	name := gctx.FormValue("name")
+	team := gctx.FormValue("team")
+	passwordConfirmation := gctx.FormValue("password_confirm")
 
 	allowRegistration, _ := strconv.ParseBool(os.Getenv("ALLOW_REGISTER"))
 	if !allowRegistration {

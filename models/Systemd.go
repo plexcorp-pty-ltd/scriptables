@@ -18,9 +18,9 @@ type SystemdService struct {
 	TeamId     int64     `gorm:"column:team_id"`
 }
 
-func GetSiteWorkers(db *gorm.DB, siteId int64, teamId int64) []SystemdService {
+func GetSiteWorkers(siteId int64, teamId int64) []SystemdService {
 	var services []SystemdService
-	db.Raw("SELECT id, name,status,command,scriptable, created_at, updated_at, team_id FROM systemd_services WHERE site_id = ? AND team_id = ?",
+	GetDB().Raw("SELECT id, name,status,command,scriptable, created_at, updated_at, team_id FROM systemd_services WHERE site_id = ? AND team_id = ?",
 		siteId, teamId).Scan(&services)
 
 	return services

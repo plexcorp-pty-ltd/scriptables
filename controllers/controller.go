@@ -18,57 +18,38 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"strconv"
-	"strings"
-	"time"
 
-	"github.com/gin-contrib/sessions"
-	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
+	"github.com/labstack/echo-contrib/session"
+	"github.com/labstack/echo/v4"
 	"github.com/noirbizarre/gonja"
-	"gorm.io/gorm"
 	"plexcorp.tech/scriptable/models"
 	"plexcorp.tech/scriptable/utils"
 )
 
-// We not using the default HTML templating engine that GIN uses. Jinja is a bit easier to work with
-// and is cleaner generally. Therefore - for this to work in GIN, a custom struct and rendering methods
-// where needed. See RenderHtml - for how this is used.
-type JinjaRender string
-
-func (n JinjaRender) Render(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, err := w.Write([]byte(n))
-	return err
-}
-
-func (n JinjaRender) WriteContentType(w http.ResponseWriter) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-}
-
 type Controller struct {
 }
 
-func (c *Controller) GetDB(gctx *gin.Context) *gorm.DB {
-	return gctx.MustGet("db").(*gorm.DB)
-}
+func (c *Controller) RenderHtml(tpl_name string, ctx gonja.Context, gctx echo.Context, layoutTpl string) error {
 
-func (c *Controller) RenderHtml(tpl_name string, ctx gonja.Context, gctx *gin.Context, layoutTpl string) {
-
-	session := sessions.Default(gctx)
-	flashes := session.Flashes("success")
-	if len(flashes) == 1 {
-		ctx["successMsg"] = flashes[0].(string)
+	sess, err := session.Get("session", gctx)
+	flash, exists := sess.Values["success"]
+	sessionChanged := false
+	if exists {
+		ctx["successMsg"] = flash.(string)
+		sess.Values["success"] = ""
+		sessionChanged = true
 	}
 
-	errorMessage := session.Flashes("error")
-	if len(errorMessage) == 1 {
-		errors, _ := ctx["errrors"].([]string)
-		ctx["errors"] = append(errors, errorMessage[0].(string))
+	flash, exists = sess.Values["errors"]
+	if exists {
+		errors, _ := flash.(string)
+		ctx["errors"] = []string{errors}
+		sess.Values["errors"] = ""
+		sessionChanged = true
 	}
 
-	if len(errorMessage) > 0 || len(flashes) > 0 {
-		session.Save()
+	if sessionChanged {
+		sess.Save(gctx.Request(), gctx.Response())
 	}
 
 	_, ok := ctx["highlight"]
@@ -83,8 +64,6 @@ func (c *Controller) RenderHtml(tpl_name string, ctx gonja.Context, gctx *gin.Co
 	ctx["STATUS_CONNECTING"] = models.STATUS_CONNECTING
 	ctx["STATUS_COMPLETE"] = models.STATUS_COMPLETE
 
-	ctx["_csrf_token"] = c.SetAndGetCSRFToken(gctx)
-
 	view, err := gonja.Must(gonja.FromFile("templates/" + tpl_name + ".jinja")).Execute(ctx)
 	if err != nil && utils.LogVerbose() {
 		fmt.Println(err)
@@ -98,108 +77,69 @@ func (c *Controller) RenderHtml(tpl_name string, ctx gonja.Context, gctx *gin.Co
 		fmt.Println(err)
 	}
 
-	gctx.Render(http.StatusOK, JinjaRender(tpl))
+	return gctx.HTML(http.StatusOK, tpl)
 }
 
 // Renders templates to authenticated users only.
-func (c *Controller) Render(tpl_name string, ctx gonja.Context, gctx *gin.Context) {
-	c.RenderHtml(tpl_name, ctx, gctx, "templates/master")
+func (c *Controller) Render(tpl_name string, ctx gonja.Context, gctx echo.Context) error {
+	return c.RenderHtml(tpl_name, ctx, gctx, "templates/master")
 }
 
 // This Render method renders public templates where authentication is not required.
-func (c *Controller) RenderAuth(tpl_name string, ctx gonja.Context, gctx *gin.Context) {
+func (c *Controller) RenderAuth(tpl_name string, ctx gonja.Context, gctx echo.Context) {
 	c.RenderHtml(tpl_name, ctx, gctx, "templates/auth")
 }
 
 // Render plain text, mostly used for viewing logs.
-func (c *Controller) RenderWithoutLayout(tpl_name string, ctx gonja.Context, gctx *gin.Context) {
+func (c *Controller) RenderWithoutLayout(tpl_name string, ctx gonja.Context, gctx echo.Context) error {
 	ctx["scriptable_base_url"] = os.Getenv("SCRIPTABLE_URL")
 	view, err := gonja.Must(gonja.FromFile("templates/" + tpl_name + ".jinja")).Execute(ctx)
 	if err != nil && utils.LogVerbose() {
 		fmt.Println(err)
 	}
-	gctx.Render(http.StatusOK, JinjaRender(view))
+	return gctx.HTML(http.StatusOK, view)
 }
 
-func (c *Controller) FlashSuccess(gctx *gin.Context, msg string) {
-	session := sessions.Default(gctx)
-	session.AddFlash(msg, "success")
-	session.Save()
+func (c *Controller) FlashMessage(gctx echo.Context, msg string, msgType string) {
+	sess, _ := session.Get("session", gctx)
+	sess.Values[msgType] = msg
+	sess.Save(gctx.Request(), gctx.Response())
 }
 
-func isTimestampWithin5Minutes(timestampStr string) bool {
-	timestamp, err := strconv.ParseInt(timestampStr, 10, 64)
-	if err != nil && utils.LogVerbose() {
-		fmt.Println("Error parsing timestamp:", err)
-		return true
-	}
-
-	timestampTime := time.Unix(timestamp, 0)
-	timeDiff := time.Since(timestampTime)
-	return timeDiff >= 2*time.Minute
+func (c *Controller) FlashSuccess(gctx echo.Context, msg string) {
+	c.FlashMessage(gctx, msg, "error")
 }
 
-func (c *Controller) SetAndGetCSRFToken(gctx *gin.Context) string {
-	session := sessions.Default(gctx)
-	sessSet := session.Get("csrfToken")
-	setToken := true
-	token := ""
-
-	if sessSet != nil && sessSet.(string) != "" {
-
-		token = sessSet.(string)
-		tStamp := strings.Split(sessSet.(string), "|")
-		if len(tStamp) == 2 {
-			tStampStr := tStamp[1]
-			setToken = isTimestampWithin5Minutes(tStampStr)
-		}
-	}
-
-	if setToken {
-		token := fmt.Sprintf("%s|%d", uuid.New().String(), time.Now().Unix())
-		session.Set("csrfToken", token)
-		session.Save()
-	}
-
-	return token
+func (c *Controller) FlashError(gctx echo.Context, msg string) {
+	c.FlashMessage(gctx, msg, "error")
 }
 
-func (c *Controller) TestCSRFToken(gctx *gin.Context) bool {
-	token := gctx.PostForm("_csrf_token")
-
-	session := sessions.Default(gctx)
-	return session.Get("csrfToken").(string) == token
-}
-
-func (c *Controller) FlashError(gctx *gin.Context, msg string) {
-	session := sessions.Default(gctx)
-	session.AddFlash(msg, "error")
-	session.Save()
-}
-
-func (c *Controller) GetSessionUser(gctx *gin.Context) models.User {
-	session := sessions.Default(gctx)
-	userId := session.Get("user_id").(int64)
+func (c *Controller) GetSessionUser(gctx echo.Context) models.User {
+	sess, _ := session.Get("session", gctx)
+	userId, ok := sess.Values["user_id"]
 	var user models.User
-	c.GetDB(gctx).Raw("SELECT id, name, email, verified, team_id FROM users where id = ?", userId).Scan(&user)
+	if !ok {
+		return user
+	}
+	c.GetDB(gctx).Raw("SELECT id, name, email, verified, team_id FROM users where id = ?", userId.(int64)).Scan(&user)
 	return user
 }
 
-func (c *Controller) ShowGuide(gctx *gin.Context) {
-	c.Render("general/guide", gonja.Context{
+func (c *Controller) ShowGuide(gctx echo.Context) error {
+	return c.Render("general/guide", gonja.Context{
 		"title":     "Scriptables help guide",
 		"highlight": "help",
 	}, gctx)
 }
 
-func (c *Controller) AccessDenied(gctx *gin.Context) {
-	c.Render("general/permission", gonja.Context{
+func (c *Controller) AccessDenied(gctx echo.Context) error {
+	return c.Render("general/permission", gonja.Context{
 		"highlight": "",
 	}, gctx)
 }
 
-func (c *Controller) TrialExpired(gctx *gin.Context) {
-	c.Render("general/trial_expired", gonja.Context{
+func (c *Controller) TrialExpired(gctx echo.Context) error {
+	return c.Render("general/trial_expired", gonja.Context{
 		"highlight": "",
 	}, gctx)
 }

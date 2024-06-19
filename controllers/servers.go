@@ -66,7 +66,7 @@ func (c *Controller) Servers(gctx *gin.Context) {
 // Should a server build fail - this allows for re-trying, scriptables will automatically
 // pick up from the last failed step and try to continue on with the build.
 func (c *Controller) RetryBuildServer(gctx *gin.Context) {
-	retryBuild := gctx.PostForm("retryBuildServerId")
+	retryBuild := gctx.FormValue("retryBuildServerId")
 	sessUser := c.GetSessionUser(gctx)
 	db := c.GetDB(gctx)
 	updated := false
@@ -375,10 +375,10 @@ func (c *Controller) FirewallRulesAjax(gctx *gin.Context) {
 }
 
 func (c *Controller) DeleteFirewallRule(gctx *gin.Context) {
-	serverID, _ := strconv.ParseInt(gctx.PostForm("server_id"), 10, 64)
-	ruleNumber, _ := strconv.ParseInt(gctx.PostForm("rule_number"), 10, 64)
+	serverID, _ := strconv.ParseInt(gctx.FormValue("server_id"), 10, 64)
+	ruleNumber, _ := strconv.ParseInt(gctx.FormValue("rule_number"), 10, 64)
 	sessUser := c.GetSessionUser(gctx)
-	rule := gctx.PostForm("rule")
+	rule := gctx.FormValue("rule")
 
 	db := c.GetDB(gctx)
 
@@ -419,9 +419,9 @@ func (c *Controller) DeleteFirewallRule(gctx *gin.Context) {
 }
 
 func (c *Controller) AddFirewallRule(gctx *gin.Context) {
-	serverID, _ := strconv.ParseInt(gctx.PostForm("server_id"), 10, 64)
+	serverID, _ := strconv.ParseInt(gctx.FormValue("server_id"), 10, 64)
 	sessUser := c.GetSessionUser(gctx)
-	rule := gctx.PostForm("rule")
+	rule := gctx.FormValue("rule")
 	db := c.GetDB(gctx)
 
 	if !models.IsMyServer(db, serverID, sessUser.TeamId) {

@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 	"github.com/noirbizarre/gonja"
 	"plexcorp.tech/scriptable/models"
 	"plexcorp.tech/scriptable/utils"
@@ -49,7 +50,7 @@ func (c *Controller) ServerLogs(gctx *gin.Context) {
 
 }
 
-func (c *Controller) ServerLogView(gctx *gin.Context) {
+func (c *Controller) ServerLogView(gctx echo.Context) error {
 	serverId, _ := strconv.ParseInt(gctx.Param("id"), 10, 64)
 	var log models.OperationLog
 	sessUser := c.GetSessionUser(gctx)
@@ -57,14 +58,14 @@ func (c *Controller) ServerLogView(gctx *gin.Context) {
 	c.GetDB(gctx).Where("id = ? and entity='server' and team_id=?", serverId, sessUser.TeamId).First(&log)
 	log.Log = utils.Decrypt(log.Log)
 
-	c.RenderWithoutLayout("logs/view_log", gonja.Context{
+	return c.RenderWithoutLayout("logs/view_log", gonja.Context{
 		"log":       log.Log,
 		"highlight": "servers",
 	}, gctx)
 
 }
 
-func (c *Controller) SiteLogs(gctx *gin.Context) {
+func (c *Controller) SiteLogs(gctx echo.Context) error {
 	siteId, _ := strconv.ParseInt(gctx.Param("id"), 10, 64)
 	sessUser := c.GetSessionUser(gctx)
 	page, err := strconv.Atoi(gctx.Query("page"))
@@ -98,11 +99,11 @@ func (c *Controller) SiteLogs(gctx *gin.Context) {
 		"highlight":     "sites",
 	}
 
-	c.Render("logs/site_list", vars, gctx)
+	return c.Render("logs/site_list", vars, gctx)
 
 }
 
-func (c *Controller) SiteLogView(gctx *gin.Context) {
+func (c *Controller) SiteLogView(gctx echo.Context) error {
 	siteID, _ := strconv.ParseInt(gctx.Param("id"), 10, 64)
 	sessUser := c.GetSessionUser(gctx)
 

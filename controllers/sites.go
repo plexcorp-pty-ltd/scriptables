@@ -59,22 +59,22 @@ func (c *Controller) CreateSite(gctx *gin.Context) {
 }
 
 func (c *Controller) SaveSite(gctx *gin.Context) {
-	domain := gctx.PostForm("domain")
-	serverId, serr := strconv.ParseInt(gctx.PostForm("server_id"), 10, 64)
-	webroot := gctx.PostForm("webroot")
-	giturl := gctx.PostForm("git_url")
-	PhpVersion := gctx.PostForm("php_version")
-	scriptables := gctx.PostForm("scriptables")
-	MysqlPassword := gctx.PostForm("mysql_password")
-	MysqlPasswordConfirm := gctx.PostForm("mysql_password_confirm")
-	environment := gctx.PostForm("environment")
-	branch := gctx.PostForm("branch")
+	domain := gctx.FormValue("domain")
+	serverId, serr := strconv.ParseInt(gctx.FormValue("server_id"), 10, 64)
+	webroot := gctx.FormValue("webroot")
+	giturl := gctx.FormValue("git_url")
+	PhpVersion := gctx.FormValue("php_version")
+	scriptables := gctx.FormValue("scriptables")
+	MysqlPassword := gctx.FormValue("mysql_password")
+	MysqlPasswordConfirm := gctx.FormValue("mysql_password_confirm")
+	environment := gctx.FormValue("environment")
+	branch := gctx.FormValue("branch")
 
 	LetsEncryptCertificate := 0
 	servers := []models.Server{}
 	c.GetDB(gctx).Find(&servers)
 
-	if gctx.PostForm("letsencrypt_certificate") != "" && gctx.PostForm("letsencrypt_certificate") == "on" {
+	if gctx.FormValue("letsencrypt_certificate") != "" && gctx.FormValue("letsencrypt_certificate") == "on" {
 		LetsEncryptCertificate = 1
 	}
 
@@ -280,7 +280,7 @@ func (c *Controller) GenerateDeployKey(gctx *gin.Context) {
 		PubKey  string `json:"pubkey"`
 	}
 
-	siteId, e := strconv.ParseInt(gctx.PostForm("siteId"), 10, 64)
+	siteId, e := strconv.ParseInt(gctx.FormValue("siteId"), 10, 64)
 
 	if siteId == 0 || e != nil {
 		msg := Response{Success: false, Error: "Please specify a site key"}
@@ -357,7 +357,7 @@ func (c *Controller) GenerateDeployKey(gctx *gin.Context) {
 
 func (c *Controller) DeployBranch(gctx *gin.Context) {
 
-	siteId, e := strconv.ParseInt(gctx.PostForm("siteId"), 10, 64)
+	siteId, e := strconv.ParseInt(gctx.FormValue("siteId"), 10, 64)
 	sessUser := c.GetSessionUser(gctx)
 
 	if siteId == 0 || e != nil {
@@ -381,7 +381,7 @@ func (c *Controller) DeployBranch(gctx *gin.Context) {
 
 func (c *Controller) ConfirmSiteDeploy(gctx *gin.Context) {
 
-	siteId, e := strconv.ParseInt(gctx.PostForm("siteId"), 10, 64)
+	siteId, e := strconv.ParseInt(gctx.FormValue("siteId"), 10, 64)
 	sessUser := c.GetSessionUser(gctx)
 
 	if siteId == 0 || e != nil {
@@ -398,7 +398,7 @@ func (c *Controller) ConfirmSiteDeploy(gctx *gin.Context) {
 }
 
 func (c *Controller) RetrySiteBuild(gctx *gin.Context) {
-	siteId, e := strconv.ParseInt(gctx.PostForm("siteId"), 10, 64)
+	siteId, e := strconv.ParseInt(gctx.FormValue("siteId"), 10, 64)
 	sessUser := c.GetSessionUser(gctx)
 
 	if siteId == 0 || e != nil {

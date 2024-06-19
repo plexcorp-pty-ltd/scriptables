@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
 	"plexcorp.tech/scriptable/utils"
 )
@@ -84,11 +84,11 @@ func GetServerTypes() []ServerType {
 
 }
 
-func GetServersList(db *gorm.DB, page int, perPage int, search string, status string, teamId int64) []Server {
+func GetServersList(page int, perPage int, search string, status string, teamId int64) []Server {
 	offset := (page - 1) * perPage
 	var servers []Server
 
-	query := db.Where("team_id=?", teamId).Limit(perPage).Offset(offset)
+	query := GetDB().Where("team_id=?", teamId).Limit(perPage).Offset(offset)
 
 	if search != "" {
 		searchQuery := search + "%"
@@ -104,28 +104,28 @@ func GetServersList(db *gorm.DB, page int, perPage int, search string, status st
 	return servers
 }
 
-func ValidateForm(gctx *gin.Context, s *Server) []string {
+func ValidateForm(gctx echo.Context, s *Server) []string {
 	errors := []string{}
 
-	s.ServerName = gctx.PostForm("server_name")
-	s.ServerIP = gctx.PostForm("server_ip")
-	s.PrivateServerIP = gctx.PostForm("private_server_ip")
-	s.PhpVersion = gctx.PostForm("php_version")
-	s.SSHKeyId, _ = strconv.ParseInt(gctx.PostForm("ssh_key_id"), 10, 64)
+	s.ServerName = gctx.FormValue("server_name")
+	s.ServerIP = gctx.FormValue("server_ip")
+	s.PrivateServerIP = gctx.FormValue("private_server_ip")
+	s.PhpVersion = gctx.FormValue("php_version")
+	s.SSHKeyId, _ = strconv.ParseInt(gctx.FormValue("ssh_key_id"), 10, 64)
 
 	s.Certbot = 0
 	s.Redis = 0
 	s.Memcache = 0
 
-	if gctx.PostForm("certbot") == "on" {
+	if gctx.FormValue("certbot") == "on" {
 		s.Certbot = 1
 	}
 
-	if gctx.PostForm("redis") == "on" {
+	if gctx.FormValue("redis") == "on" {
 		s.Redis = 1
 	}
 
-	if gctx.PostForm("memcache") == "on" {
+	if gctx.FormValue("memcache") == "on" {
 		s.Memcache = 1
 	}
 
@@ -137,8 +137,8 @@ func ValidateForm(gctx *gin.Context, s *Server) []string {
 
 	if s.ServerType == "lemp" || s.ServerType == "lamp" || s.ServerType == "mysql" {
 		s.MySql = 1
-		s.MySqlRootPassword = gctx.PostForm("mysql_root_password")
-		MysqlConfirmRootPassword := gctx.PostForm("confirm_mysql_root_password")
+		s.MySqlRootPassword = gctx.FormValue("mysql_root_password")
+		MysqlConfirmRootPassword := gctx.FormValue("confirm_mysql_root_password")
 
 		if len(s.MySqlRootPassword) < 6 {
 			errors = append(errors, "MYSQL root password must be at least 6 characters.")
@@ -153,12 +153,12 @@ func ValidateForm(gctx *gin.Context, s *Server) []string {
 		errors = append(errors, "Please select a cache server type either redis or memcache.")
 	}
 
-	s.SSHUsername = gctx.PostForm("ssh_username")
-	s.NewSSHUsername = gctx.PostForm("new_ssh_username")
-	s.ScriptableName = gctx.PostForm("scriptable_name")
-	s.SshPort, _ = strconv.Atoi(gctx.PostForm("ssh_port"))
-	s.NewSshPort, _ = strconv.Atoi(gctx.PostForm("new_ssh_port"))
-	s.AptPackages = gctx.PostForm("apt_packages")
+	s.SSHUsername = gctx.FormValue("ssh_username")
+	s.NewSSHUsername = gctx.FormValue("new_ssh_username")
+	s.ScriptableName = gctx.FormValue("scriptable_name")
+	s.SshPort, _ = strconv.Atoi(gctx.FormValue("ssh_port"))
+	s.NewSshPort, _ = strconv.Atoi(gctx.FormValue("new_ssh_port"))
+	s.AptPackages = gctx.FormValue("apt_packages")
 
 	if s.SSHUsername == "" || len(s.SSHUsername) < 3 {
 		errors = append(errors, "Please input your server SSH username, usually this is root. We'll need this intially to connect to this server.")
@@ -186,12 +186,12 @@ func ValidateForm(gctx *gin.Context, s *Server) []string {
 	return errors
 }
 
-func GetQueuedBuids(db *gorm.DB, limit int) []ServerWithSShKey {
+func GetQueuedBuids(limit int) []ServerWithSShKey {
 	if limit == 0 {
 		limit = 10
 	}
 
-	rows, _ := db.Raw(
+	rows, _ := GetDB().Raw(
 		`SELECT s.ID, s.server_name, s.server_type, s.server_ip,s.private_server_ip,
 		s.ssh_username,s.new_ssh_username,s.redis,s.certbot,s.memcache,
 		s.mysql,s.mysql_root_password,s.php_version,s.webserver_type, s.scriptable_name,s.status,s.ssh_port,s.new_ssh_port,
@@ -241,10 +241,10 @@ func GetQueuedBuids(db *gorm.DB, limit int) []ServerWithSShKey {
 	return servers
 }
 
-func GetServer(db *gorm.DB, serverId int64, teamId int64) ServerWithSShKey {
+func GetServer(serverId int64, teamId int64) ServerWithSShKey {
 	var server ServerWithSShKey
 
-	row := db.Raw(
+	row := GetDB().Raw(
 		`SELECT s.ID, s.server_name, s.server_type, s.server_ip,s.private_server_ip,
 		s.ssh_username,s.new_ssh_username,s.redis,s.certbot,s.memcache,
 		s.mysql,s.mysql_root_password,s.php_version,s.webserver_type, s.scriptable_name,s.status,s.ssh_port,s.new_ssh_port,
@@ -283,21 +283,21 @@ func GetServer(db *gorm.DB, serverId int64, teamId int64) ServerWithSShKey {
 	return server
 }
 
-func GetServerSimple(db *gorm.DB, serverID int64, teamId int64) *Server {
+func GetServerSimple(serverID int64, teamId int64) *Server {
 	var server *Server
-	db.Where("id=? and team_id=?", serverID, teamId).First(&server)
+	GetDB().Where("id=? and team_id=?", serverID, teamId).First(&server)
 	return server
 }
 
-func GetServerByIp(db *gorm.DB, serverIP string, teamId int64) ServerWithSShKey {
+func GetServerByIp(serverIP string, teamId int64) ServerWithSShKey {
 	var server ServerWithSShKey
 
-	row := db.Raw(
+	row := GetDB().Raw(
 		`SELECT s.ID, s.server_name, s.server_type, s.server_ip,s.private_server_ip,
 		s.ssh_username,s.new_ssh_username,s.redis,s.certbot,s.memcache,
 		s.mysql,s.mysql_root_password,s.php_version,s.webserver_type, s.scriptable_name,s.status,s.ssh_port,s.new_ssh_port,
 		s.apt_packages,k.private_key, k.public_key, k.passphrase,s.team_id
-		FROM servers s 
+		FROM servers s
 		JOIN ssh_keys k ON(k.ID = s.ssh_key_id)
 		WHERE s.server_ip = ?
 		`, serverIP).Row()
@@ -345,10 +345,10 @@ func (s *ServerWithSShKey) SubScriptableVars(script string) string {
 	return script
 }
 
-func IsMyServer(db *gorm.DB, serverID int64, teamID int64) bool {
+func IsMyServer(serverID int64, teamID int64) bool {
 	totalFound := int64(0)
 
-	db.Table("servers").Where("id=? and team_id=?", serverID, teamID).Count(&totalFound)
+	GetDB().Table("servers").Where("id=? and team_id=?", serverID, teamID).Count(&totalFound)
 
 	return totalFound > 0
 }

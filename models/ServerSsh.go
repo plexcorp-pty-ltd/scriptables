@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"time"
 
-	"gorm.io/gorm"
 	"plexcorp.tech/scriptable/sshclient"
 	"plexcorp.tech/scriptable/utils"
 )
@@ -30,7 +29,7 @@ func GetSSHClient(server *ServerWithSShKey, intialConnect bool) (*sshclient.Clie
 	return client, err
 }
 
-func RunScriptable(db *gorm.DB, entity string, id int64, client *sshclient.Client, cmd string, summary string, logtask bool, teamId int64) (error, string) {
+func RunScriptable(entity string, id int64, client *sshclient.Client, cmd string, summary string, logtask bool, teamId int64) (error, string) {
 
 	if utils.LogVerbose() {
 		fmt.Println("Running ", summary)
@@ -54,7 +53,7 @@ func RunScriptable(db *gorm.DB, entity string, id int64, client *sshclient.Clien
 			TaskStatus: status,
 			TeamID:     teamId,
 		}
-		db.Create(&step)
+		GetDB().Create(&step)
 	}
 
 	return err, string(out)
