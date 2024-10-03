@@ -35,14 +35,14 @@ func SendEmail(subject string, from string, recipients []string, vars gonja.Cont
 	}()
 	vars["scriptable_base_url"] = os.Getenv("SCRIPTABLE_URL")
 
-	view, err := gonja.Must(gonja.FromFile("templates/emails/" + template + ".jinja")).Execute(vars)
+	view, err := gonja.Must(gonja.FromFile("templates/emails/" + template + ".html")).Execute(vars)
 
 	if err != nil {
 		fmt.Println(err)
 	}
 
 	vars["view"] = view
-	master := gonja.Must(gonja.FromFile("templates/emails/master.jinja"))
+	master := gonja.Must(gonja.FromFile("templates/emails/master.html"))
 	tpl, err := master.Execute(vars)
 
 	if err != nil {

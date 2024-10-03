@@ -1,0 +1,35 @@
+<div class="row">
+  <div class="col-md-12 py-2 pb-4">
+    <h2 class="page-title">Pick a server template to deploy</h2>
+  </div>
+</div>
+<div class="row">
+  {% for s in serverTypes %}
+    <div class="col-md-6 mb-2">
+      <div class="card card-sm">
+        <div class="card-body">
+          <div class="row align-items-center">
+            <div class="col-auto">
+              <span class="bg-x text-white"><img src="/static/icons/{{ s.Slug }}.svg" style="max-width:100px" /></span>
+            </div>
+            <div class="col">
+              <div class="font-weight-medium">
+                <h5 class="card-title">{{ s.Name }}</h5>
+              </div>
+              <div class="text-secondary">
+                <div style="display:flex;justify-content: space-between;gap:5px;">
+                  <div>
+                    <p class="card-text">{{ s.Description }}</p>
+                  </div>
+                  <div>
+                    <a href="/server/create/{{ s.Slug }}" class="btn btn-primary d-none d-sm-inline-block">Deploy >></a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+</div>

@@ -53,14 +53,14 @@ func (c *Controller) RenderHtml(tpl_name string, ctx gonja.Context, gctx echo.Co
 	ctx["STATUS_CONNECTING"] = models.STATUS_CONNECTING
 	ctx["STATUS_COMPLETE"] = models.STATUS_COMPLETE
 
-	view, err := gonja.Must(gonja.FromFile("templates/" + tpl_name + ".jinja")).Execute(ctx)
+	view, err := gonja.Must(gonja.FromFile("templates/" + tpl_name + ".html")).Execute(ctx)
 	if err != nil && utils.LogVerbose() {
 		fmt.Println(err)
 	}
 
 	ctx["view"] = view
 
-	var MASTER_TPL = gonja.Must(gonja.FromFile(layoutTpl + ".jinja"))
+	var MASTER_TPL = gonja.Must(gonja.FromFile(layoutTpl + ".html"))
 	tpl, err := MASTER_TPL.Execute(ctx)
 	if err != nil && utils.LogVerbose() {
 		fmt.Println(err)
@@ -82,7 +82,7 @@ func (c *Controller) RenderAuth(tpl_name string, ctx gonja.Context, gctx echo.Co
 // Render plain text, mostly used for viewing logs.
 func (c *Controller) RenderWithoutLayout(tpl_name string, ctx gonja.Context, gctx echo.Context) error {
 	ctx["scriptable_base_url"] = os.Getenv("SCRIPTABLE_URL")
-	view, err := gonja.Must(gonja.FromFile("templates/" + tpl_name + ".jinja")).Execute(ctx)
+	view, err := gonja.Must(gonja.FromFile("templates/" + tpl_name + ".html")).Execute(ctx)
 	if err != nil && utils.LogVerbose() {
 		fmt.Println(err)
 	}
