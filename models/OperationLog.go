@@ -36,7 +36,7 @@ type ScriptableTaskLog struct {
 	TeamID     int64
 }
 
-func Log(db *gorm.DB, entityId int64, entity string, log string, summary string, LogLevel string, teamId int64) {
+func Log(entityId int64, entity string, log string, summary string, LogLevel string, teamId int64) {
 
 	opLog := OperationLog{
 
@@ -49,27 +49,27 @@ func Log(db *gorm.DB, entityId int64, entity string, log string, summary string,
 		UpdatedAt:  time.Now(),
 		TeamID:     teamId,
 	}
-	db.Create(&opLog)
+	GetDB().Create(&opLog)
 }
 
-func LogError(db *gorm.DB, entityId int64, entity string, log string, summary string, teamId int64) {
-	Log(db, entityId, entity, log, summary, "Error", teamId)
+func LogError(entityId int64, entity string, log string, summary string, teamId int64) {
+	Log(entityId, entity, log, summary, "Error", teamId)
 }
 
-func LogInfo(db *gorm.DB, entityId int64, entity string, log string, summary string, teamId int64) {
-	Log(db, entityId, entity, log, summary, "Info", teamId)
+func LogInfo(entityId int64, entity string, log string, summary string, teamId int64) {
+	Log(entityId, entity, log, summary, "Info", teamId)
 }
 
-func GetOperationLogs(db *gorm.DB, page int, perPage int, entity_type string, id int64, logLevel string, teamId int64) []OperationLog {
+func GetOperationLogs(page int, perPage int, entity_type string, id int64, logLevel string, teamId int64) []OperationLog {
 	offset := (page - 1) * perPage
 	var logs []OperationLog
 
 	if logLevel != "" {
-		db.Where("entity=? AND entity_id=? AND log_level=? and team_id=?",
+		GetDB().Where("entity=? AND entity_id=? AND log_level=? and team_id=?",
 			entity_type, id, logLevel, teamId,
 		).Limit(perPage).Offset(offset).Order("created_at desc").Find(&logs)
 	} else {
-		db.Where("entity=? AND entity_id=? and team_id=?",
+		GetDB().Where("entity=? AND entity_id=? and team_id=?",
 			entity_type, id, teamId,
 		).Limit(perPage).Offset(offset).Order("created_at desc").Find(&logs)
 	}

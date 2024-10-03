@@ -13,7 +13,7 @@ import (
 )
 
 func DeployBranch(db *gorm.DB) {
-	siteIDs := models.GetSitesToDeploy(db)
+	siteIDs := models.GetSitesToDeploy()
 	queued := 0
 	var wg sync.WaitGroup
 
@@ -24,8 +24,8 @@ func DeployBranch(db *gorm.DB) {
 			time.Sleep(20 * time.Second)
 		}
 
-		site := models.GetSiteByIdNoTeam(db, sid)
-		server := models.GetServer(db, site.ServerID, site.TeamId)
+		site := models.GetSiteByIdNoTeam(sid)
+		server := models.GetServer(site.ServerID, site.TeamId)
 		scripts := utils.GetScriptables(site.DeployScriptables)
 
 		if len(scripts) == 0 {

@@ -4,12 +4,16 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/base64"
+	"encoding/pem"
 	"fmt"
 	"log"
 	"os"
 
 	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/crypto/ssh"
 )
 
 var RANDOM_BYTES = []byte{35, 46, 57, 24, 85, 35, 24, 74, 87, 35, 88, 98, 66, 32, 14, 05}
@@ -91,4 +95,29 @@ func GenToken() string {
 	}
 
 	return string(buffer)
+}
+
+func MakeSSHKey() (string, string) {
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		fmt.Println("Error generating RSA SSH key:", err)
+		return "", ""
+	}
+
+	privateKeyPEM := pem.EncodeToMemory(
+		&pem.Block{
+			Type:  "RSA PRIVATE KEY",
+			Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
+		},
+	)
+
+	pubKey, err := ssh.NewPublicKey(&privateKey.PublicKey)
+	if err != nil {
+		fmt.Println("Error generating SSH public key:", err)
+		return "", ""
+	}
+
+	pubKeyBytes := ssh.MarshalAuthorizedKey(pubKey)
+
+	return string(privateKeyPEM), string(pubKeyBytes)
 }

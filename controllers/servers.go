@@ -7,25 +7,25 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 	"github.com/noirbizarre/gonja"
 	"plexcorp.tech/scriptable/models"
 	"plexcorp.tech/scriptable/utils"
 )
 
-func (c *Controller) ChooseServerType(gctx *gin.Context) {
-	c.Render("servers/build", gonja.Context{
+func (c *Controller) ChooseServerType(gctx echo.Context) error {
+	return c.Render("servers/build", gonja.Context{
 		"serverTypes": models.GetServerTypes(),
 		"title":       "Choose server template",
 	}, gctx)
 
 }
 
-func (c *Controller) Servers(gctx *gin.Context) {
-	page, err := strconv.Atoi(gctx.Query("page"))
+func (c *Controller) Servers(gctx echo.Context) error {
+	page, err := strconv.Atoi(gctx.QueryParam("page"))
 	sessUser := c.GetSessionUser(gctx)
-	view := gctx.Query("view")
-	status := gctx.Query("status")
+	view := gctx.QueryParam("view")
+	status := gctx.QueryParam("status")
 	if status == "" {
 		status = "all"
 	}
@@ -33,13 +33,13 @@ func (c *Controller) Servers(gctx *gin.Context) {
 		page = 1
 	}
 
-	perPage, err := strconv.Atoi(gctx.Query("perPage"))
+	perPage, err := strconv.Atoi(gctx.QueryParam("perPage"))
 	if err != nil {
 		perPage = 20
 	}
 
-	search := gctx.Query("search")
-	servers := models.GetServersList(c.GetDB(gctx), page, perPage, search, status, sessUser.TeamId)
+	search := gctx.QueryParam("search")
+	servers := models.GetServersList(page, perPage, search, status, sessUser.TeamId)
 	searchQuery := ""
 
 	if search != "" {
@@ -59,23 +59,22 @@ func (c *Controller) Servers(gctx *gin.Context) {
 		"highlight":   "servers",
 	}
 
-	c.Render("servers/list", vars, gctx)
+	return c.Render("servers/list", vars, gctx)
 
 }
 
 // Should a server build fail - this allows for re-trying, scriptables will automatically
 // pick up from the last failed step and try to continue on with the build.
-func (c *Controller) RetryBuildServer(gctx *gin.Context) {
-	retryBuild := gctx.PostForm("retryBuildServerId")
+func (c *Controller) RetryBuildServer(gctx echo.Context) error {
+	retryBuild := gctx.FormValue("retryBuildServerId")
 	sessUser := c.GetSessionUser(gctx)
-	db := c.GetDB(gctx)
+	db := models.GetDB()
 	updated := false
 
 	if retryBuild != "" {
 		sid, err := strconv.ParseInt(retryBuild, 10, 64)
-		if !models.IsMyServer(db, sid, sessUser.TeamId) {
-			gctx.Redirect(http.StatusFound, "/denied")
-			return
+		if !models.IsMyServer(sid, sessUser.TeamId) {
+			return gctx.Redirect(http.StatusFound, "/denied")
 		}
 
 		if err == nil && sid != 0 {
@@ -90,25 +89,25 @@ func (c *Controller) RetryBuildServer(gctx *gin.Context) {
 		c.FlashSuccess(gctx, "Successfully queued server rebuild.")
 	}
 
-	gctx.Redirect(http.StatusFound, "/servers")
+	return gctx.Redirect(http.StatusFound, "/servers")
 }
 
-func (c *Controller) CreateServer(gctx *gin.Context) {
+func (c *Controller) CreateServer(gctx echo.Context) error {
 	var countSshKeys int64
 	sessUser := c.GetSessionUser(gctx)
+	db := models.GetDB()
 
-	c.GetDB(gctx).Table("ssh_keys").Where("team_id=?", sessUser.TeamId).Count(&countSshKeys)
+	db.Table("ssh_keys").Where("team_id=?", sessUser.TeamId).Count(&countSshKeys)
 	if countSshKeys == 0 {
-		c.Render("general/warning", gonja.Context{
+		return c.Render("general/warning", gonja.Context{
 			"title":      "SSH keys not found",
 			"warningMsg": "Please add at least one SSH Key <a href=\"/sshkey/create\"> here</a> first before trying to build a server.",
 		}, gctx)
 
-		return
 	}
 
 	keys := []models.SshKey{}
-	c.GetDB(gctx).Where("team_id=?", sessUser.TeamId).Find(&keys)
+	db.Where("team_id=?", sessUser.TeamId).Find(&keys)
 	serverType := gctx.Param("servertype")
 
 	server := models.Server{ServerType: serverType}
@@ -119,7 +118,7 @@ func (c *Controller) CreateServer(gctx *gin.Context) {
 
 	var errors []string
 
-	if gctx.Request.Method == http.MethodPost {
+	if gctx.Request().Method == http.MethodPost {
 		errors = models.ValidateForm(gctx, &server)
 	}
 
@@ -151,9 +150,9 @@ func (c *Controller) CreateServer(gctx *gin.Context) {
 		"highlight":         "servers",
 	}
 
-	if gctx.Request.Method == http.MethodPost && len(errors) > 0 {
+	if gctx.Request().Method == http.MethodPost && len(errors) > 0 {
 		vars["errors"] = errors
-	} else if gctx.Request.Method == http.MethodPost {
+	} else if gctx.Request().Method == http.MethodPost {
 		server.Status = models.STATUS_CONNECTING
 		server.UpdatedAt = time.Now()
 		server.CreatedAt = time.Now()
@@ -165,32 +164,31 @@ func (c *Controller) CreateServer(gctx *gin.Context) {
 		sessUser := c.GetSessionUser(gctx)
 		server.TeamId = sessUser.TeamId
 
-		c.GetDB(gctx).Create(&server)
+		db.Create(&server)
 		c.FlashSuccess(gctx, "Successfully saved. We are now testing the connection to this server...")
-		gctx.Redirect(http.StatusFound, fmt.Sprintf("/server/test-ssh/%d", server.ID))
-		return
+		return gctx.Redirect(http.StatusFound, fmt.Sprintf("/server/test-ssh/%d", server.ID))
 	}
 
-	c.Render("servers/form", vars, gctx)
+	return c.Render("servers/form", vars, gctx)
 
 }
 
-func (c *Controller) UpdateServer(gctx *gin.Context) {
+func (c *Controller) UpdateServer(gctx echo.Context) error {
 	keys := []models.SshKey{}
 	sessUser := c.GetSessionUser(gctx)
-	db := c.GetDB(gctx)
+	db := models.GetDB()
 	db.Where("team_id=?", sessUser.TeamId).Find(&keys)
 
 	serverId, _ := strconv.ParseInt(gctx.Param("id"), 10, 64)
-	server := models.GetServerSimple(db, serverId, sessUser.TeamId)
+	server := models.GetServerSimple(serverId, sessUser.TeamId)
 	var errors []string
 
-	if !models.IsMyServer(db, serverId, sessUser.TeamId) {
-		gctx.Redirect(http.StatusFound, "/denied")
-		return
+	if !models.IsMyServer(serverId, sessUser.TeamId) {
+		return gctx.Redirect(http.StatusFound, "/denied")
+
 	}
 
-	if gctx.Request.Method == http.MethodPost {
+	if gctx.Request().Method == http.MethodPost {
 		errors = models.ValidateForm(gctx, server)
 	}
 
@@ -222,9 +220,9 @@ func (c *Controller) UpdateServer(gctx *gin.Context) {
 		"highlight":         "servers",
 	}
 
-	if gctx.Request.Method == http.MethodPost && len(errors) > 0 {
+	if gctx.Request().Method == http.MethodPost && len(errors) > 0 {
 		vars["errors"] = errors
-	} else if gctx.Request.Method == http.MethodPost {
+	} else if gctx.Request().Method == http.MethodPost {
 		server.Status = models.STATUS_CONNECTING
 		server.UpdatedAt = time.Now()
 		server.CreatedAt = time.Now()
@@ -232,31 +230,27 @@ func (c *Controller) UpdateServer(gctx *gin.Context) {
 		if server.MySqlRootPassword != "" {
 			server.MySqlRootPassword = utils.Encrypt(server.MySqlRootPassword)
 		}
-		c.GetDB(gctx).Save(&server)
+		db.Save(&server)
 		c.FlashSuccess(gctx, "Successfully updated. We are now testing the connection to this server...")
-		gctx.Redirect(http.StatusFound, fmt.Sprintf("/server/test-ssh/%d", server.ID))
-		return
+		return gctx.Redirect(http.StatusFound, fmt.Sprintf("/server/test-ssh/%d", server.ID))
 	}
 
-	c.Render("servers/form", vars, gctx)
+	return c.Render("servers/form", vars, gctx)
 
 }
 
 // When you create a new server, Scriptables will automatically try and
 // establish an SSH connection to your server using the linked SSH key pair.
 // Should something go wrong, you'll be notified and can either change your SSH key or retry.
-func (c *Controller) ShowTestConnectionLoader(gctx *gin.Context) {
+func (c *Controller) ShowTestConnectionLoader(gctx echo.Context) error {
 	id, _ := strconv.ParseInt(gctx.Param("id"), 10, 64)
 	sessUser := c.GetSessionUser(gctx)
-
-	db := c.GetDB(gctx)
-	server := models.GetServer(db, id, sessUser.TeamId)
-	if !models.IsMyServer(db, id, sessUser.TeamId) {
-		gctx.Redirect(http.StatusFound, "/denied")
-		return
+	server := models.GetServer(id, sessUser.TeamId)
+	if !models.IsMyServer(id, sessUser.TeamId) {
+		return gctx.Redirect(http.StatusFound, "/denied")
 	}
 
-	c.Render("servers/sshtest", gonja.Context{
+	return c.Render("servers/sshtest", gonja.Context{
 		"title":      "Testing SSH connection to your server...",
 		"id":         id,
 		"serverName": server.ServerName,
@@ -265,15 +259,13 @@ func (c *Controller) ShowTestConnectionLoader(gctx *gin.Context) {
 	}, gctx)
 }
 
-func (c *Controller) TestSSHConnection(gctx *gin.Context) {
+func (c *Controller) TestSSHConnection(gctx echo.Context) error {
 	id, _ := strconv.ParseInt(gctx.Param("id"), 10, 64)
 	sessUser := c.GetSessionUser(gctx)
-	db := c.GetDB(gctx)
-	server := models.GetServer(db, id, sessUser.TeamId)
+	server := models.GetServer(id, sessUser.TeamId)
 
-	if !models.IsMyServer(db, id, sessUser.TeamId) {
-		gctx.Redirect(http.StatusFound, "/denied")
-		return
+	if !models.IsMyServer(id, sessUser.TeamId) {
+		return gctx.Redirect(http.StatusFound, "/denied")
 	}
 
 	response := make(map[string]string)
@@ -286,39 +278,36 @@ func (c *Controller) TestSSHConnection(gctx *gin.Context) {
 	if server.ID == 0 {
 		response["status"] = "failed"
 		response["message"] = errorMsg
-		gctx.JSON(http.StatusBadRequest, response)
-		return
+		return gctx.JSON(http.StatusBadRequest, response)
 	}
 
 	connection, err := models.GetSSHClient(&server, true)
+	db := models.GetDB()
 	if err == nil {
 		connection.Close()
-		c.GetDB(gctx).Exec("UPDATE servers SET status=? WHERE id=?", models.STATUS_QUEUED, server.ID)
+		db.Exec("UPDATE servers SET status=? WHERE id=?", models.STATUS_QUEUED, server.ID)
 		response["status"] = "success"
 		response["message"] = "Success! now attempting deploy. Please check server logs for progress and more information."
-		gctx.JSON(http.StatusOK, response)
-		return
+		return gctx.JSON(http.StatusOK, response)
 	} else {
-		c.GetDB(gctx).Exec("UPDATE servers set status=? WHERE id = ?", models.STATUS_FAILED, server.ID)
+		db.Exec("UPDATE servers set status=? WHERE id = ?", models.STATUS_FAILED, server.ID)
 	}
 
-	gctx.JSON(http.StatusBadRequest, response)
+	return gctx.JSON(http.StatusBadRequest, response)
 
 }
 
-func (c *Controller) FirewallRules(gctx *gin.Context) {
+func (c *Controller) FirewallRules(gctx echo.Context) error {
 	id, _ := strconv.ParseInt(gctx.Param("serverID"), 10, 64)
 	sessUser := c.GetSessionUser(gctx)
-	db := c.GetDB(gctx)
 
-	if !models.IsMyServer(db, id, sessUser.TeamId) {
-		gctx.Redirect(http.StatusFound, "/denied")
-		return
+	if !models.IsMyServer(id, sessUser.TeamId) {
+		return gctx.Redirect(http.StatusFound, "/denied")
 	}
 
-	server := models.GetServer(db, id, sessUser.TeamId)
+	server := models.GetServer(id, sessUser.TeamId)
 
-	c.Render("servers/firewall_rules", gonja.Context{
+	return c.Render("servers/firewall_rules", gonja.Context{
 		"title":      "Server firewall rules",
 		"serverID":   id,
 		"serverName": server.ServerName,
@@ -326,31 +315,27 @@ func (c *Controller) FirewallRules(gctx *gin.Context) {
 	}, gctx)
 }
 
-func (c *Controller) FirewallRulesAjax(gctx *gin.Context) {
+func (c *Controller) FirewallRulesAjax(gctx echo.Context) error {
 	id, err := strconv.ParseInt(gctx.Param("serverID"), 10, 64)
-	db := c.GetDB(gctx)
 	sessUser := c.GetSessionUser(gctx)
 	var server models.ServerWithSShKey
 
-	if !models.IsMyServer(db, id, sessUser.TeamId) {
-		gctx.Redirect(http.StatusFound, "/denied")
-		return
+	if !models.IsMyServer(id, sessUser.TeamId) {
+		return gctx.Redirect(http.StatusFound, "/denied")
 	}
 
 	response := make(map[string]string)
 	if err != nil {
 		response["status"] = "failed"
 		response["msg"] = "Invalid server ID"
-		gctx.JSON(http.StatusBadRequest, response)
-		return
+		return gctx.JSON(http.StatusBadRequest, response)
 	}
 
-	server = models.GetServer(db, id, sessUser.TeamId)
+	server = models.GetServer(id, sessUser.TeamId)
 	if server.ID == 0 {
 		response["status"] = "failed"
 		response["msg"] = "Invalid server ID"
-		gctx.JSON(http.StatusBadRequest, response)
-		return
+		return gctx.JSON(http.StatusBadRequest, response)
 	}
 
 	client, err := models.GetSSHClient(&server, false)
@@ -358,8 +343,7 @@ func (c *Controller) FirewallRulesAjax(gctx *gin.Context) {
 	if err != nil {
 		response["status"] = "failed"
 		response["msg"] = err.Error()
-		gctx.JSON(http.StatusBadRequest, response)
-		return
+		return gctx.JSON(http.StatusBadRequest, response)
 	}
 
 	rules, err := models.GetRules(client)
@@ -367,24 +351,20 @@ func (c *Controller) FirewallRulesAjax(gctx *gin.Context) {
 	if err != nil {
 		response["status"] = "failed"
 		response["msg"] = err.Error()
-		gctx.JSON(http.StatusBadRequest, response)
-		return
+		return gctx.JSON(http.StatusBadRequest, response)
 	}
 
-	gctx.JSON(http.StatusOK, rules)
+	return gctx.JSON(http.StatusOK, rules)
 }
 
-func (c *Controller) DeleteFirewallRule(gctx *gin.Context) {
-	serverID, _ := strconv.ParseInt(gctx.PostForm("server_id"), 10, 64)
-	ruleNumber, _ := strconv.ParseInt(gctx.PostForm("rule_number"), 10, 64)
+func (c *Controller) DeleteFirewallRule(gctx echo.Context) error {
+	serverID, _ := strconv.ParseInt(gctx.FormValue("server_id"), 10, 64)
+	ruleNumber, _ := strconv.ParseInt(gctx.FormValue("rule_number"), 10, 64)
 	sessUser := c.GetSessionUser(gctx)
-	rule := gctx.PostForm("rule")
+	rule := gctx.FormValue("rule")
 
-	db := c.GetDB(gctx)
-
-	if !models.IsMyServer(db, serverID, sessUser.TeamId) {
-		gctx.Redirect(http.StatusFound, "/denied")
-		return
+	if !models.IsMyServer(serverID, sessUser.TeamId) {
+		return gctx.Redirect(http.StatusFound, "/denied")
 	}
 
 	response := make(map[string]string)
@@ -392,41 +372,37 @@ func (c *Controller) DeleteFirewallRule(gctx *gin.Context) {
 	if serverID == 0 || ruleNumber == 0 {
 		response["status"] = "failed"
 		response["msg"] = "Bad server or rule ID."
-		gctx.JSON(http.StatusBadRequest, response)
-		return
+		return gctx.JSON(http.StatusBadRequest, response)
 	}
 
-	server := models.GetServer(db, serverID, sessUser.TeamId)
+	server := models.GetServer(serverID, sessUser.TeamId)
 	if server.ID == 0 {
 		response["status"] = "failed"
 		response["msg"] = "Bad server or rule ID."
-		gctx.JSON(http.StatusBadRequest, response)
-		return
+		return gctx.JSON(http.StatusBadRequest, response)
 	}
 
-	err := models.DeleteFirewallRule(db, &server, ruleNumber, rule)
+	err := models.DeleteFirewallRule(&server, ruleNumber, rule)
 
 	if err != nil {
 		response["status"] = "failed"
 		response["msg"] = "Bad server or rule ID."
-		gctx.JSON(http.StatusBadRequest, response)
-		return
+		return gctx.JSON(http.StatusBadRequest, response)
 	}
 
 	response["status"] = "success"
 	response["msg"] = "Successfully deleted rule."
-	gctx.JSON(http.StatusOK, response)
+
+	return gctx.JSON(http.StatusOK, response)
 }
 
-func (c *Controller) AddFirewallRule(gctx *gin.Context) {
-	serverID, _ := strconv.ParseInt(gctx.PostForm("server_id"), 10, 64)
+func (c *Controller) AddFirewallRule(gctx echo.Context) error {
+	serverID, _ := strconv.ParseInt(gctx.FormValue("server_id"), 10, 64)
 	sessUser := c.GetSessionUser(gctx)
-	rule := gctx.PostForm("rule")
-	db := c.GetDB(gctx)
+	rule := gctx.FormValue("rule")
 
-	if !models.IsMyServer(db, serverID, sessUser.TeamId) {
-		gctx.Redirect(http.StatusFound, "/denied")
-		return
+	if !models.IsMyServer(serverID, sessUser.TeamId) {
+		return gctx.Redirect(http.StatusFound, "/denied")
 	}
 
 	response := make(map[string]string)
@@ -434,16 +410,14 @@ func (c *Controller) AddFirewallRule(gctx *gin.Context) {
 	if serverID == 0 || rule == "" {
 		response["status"] = "failed"
 		response["msg"] = "Bad server or firewall rule."
-		gctx.JSON(http.StatusBadRequest, response)
-		return
+		return gctx.JSON(http.StatusBadRequest, response)
 	}
 
-	server := models.GetServer(db, serverID, sessUser.TeamId)
+	server := models.GetServer(serverID, sessUser.TeamId)
 	if server.ID == 0 {
 		response["status"] = "failed"
 		response["msg"] = "Bad server ID."
-		gctx.JSON(http.StatusBadRequest, response)
-		return
+		return gctx.JSON(http.StatusBadRequest, response)
 	}
 
 	rule = strings.ToLower(rule)
@@ -458,16 +432,15 @@ func (c *Controller) AddFirewallRule(gctx *gin.Context) {
 
 	rule = strings.ReplaceAll(rule, "port any proto", "proto")
 
-	err := models.AddFirewallRule(db, &server, rule)
+	err := models.AddFirewallRule(&server, rule)
 
 	if err != nil {
 		response["status"] = "failed"
 		response["msg"] = "Failed to add firewall rule. Please try again."
-		gctx.JSON(http.StatusBadRequest, response)
-		return
+		return gctx.JSON(http.StatusBadRequest, response)
 	}
 
 	response["status"] = "success"
 	response["msg"] = "Successfully added firewall rule."
-	gctx.JSON(http.StatusOK, response)
+	return gctx.JSON(http.StatusOK, response)
 }

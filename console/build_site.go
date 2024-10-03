@@ -37,7 +37,7 @@ func RunSiteBuild(db *gorm.DB, site *models.Site, server *models.ServerWithSShKe
 
 	client, err := models.GetSSHClient(server, false)
 	if err != nil {
-		models.LogError(db, server.ID, "server",
+		models.LogError(server.ID, "server",
 			"Cannot SSH into server: "+server.ServerName+" - "+server.ServerIP, "SSH connection failed: "+err.Error(), server.TeamId)
 		db.Model(&models.Site{}).Where("id", site.ID).Update("status", models.STATUS_FAILED)
 		return err
@@ -64,7 +64,7 @@ func RunSiteBuild(db *gorm.DB, site *models.Site, server *models.ServerWithSShKe
 		file, err := os.Open(script)
 		if err != nil {
 			errors += 1
-			models.LogError(db, site.ID, "site", err.Error()+" "+err.Error(), "Failed to run: "+script, server.TeamId)
+			models.LogError(site.ID, "site", err.Error()+" "+err.Error(), "Failed to run: "+script, server.TeamId)
 			break
 		}
 
@@ -76,14 +76,14 @@ func RunSiteBuild(db *gorm.DB, site *models.Site, server *models.ServerWithSShKe
 				fmt.Println(rerr)
 			}
 			errors += 1
-			models.LogError(db, site.ID, "site", rerr.Error(), "Failed to run: "+script, site.TeamId)
+			models.LogError(site.ID, "site", rerr.Error(), "Failed to run: "+script, site.TeamId)
 			break
 		}
 
 		commandToRun := string(cmd)
-		commandToRun = site.SubScriptableVars(db, server, commandToRun)
+		commandToRun = site.SubScriptableVars(server, commandToRun)
 
-		commandToRun, parseError := parsers.ParseSiteScriptable(db, site, commandToRun)
+		commandToRun, parseError := parsers.ParseSiteScriptable(site, commandToRun)
 		if parseError {
 			if strings.Contains(commandToRun, "exit-on-failure=yes") {
 				break
@@ -91,7 +91,7 @@ func RunSiteBuild(db *gorm.DB, site *models.Site, server *models.ServerWithSShKe
 		}
 
 		// For scriptables within imports
-		commandToRun = site.SubScriptableVars(db, server, commandToRun)
+		commandToRun = site.SubScriptableVars(server, commandToRun)
 
 		if parseError {
 			if strings.Contains(commandToRun, "exit-on-failure=yes") {
@@ -99,17 +99,17 @@ func RunSiteBuild(db *gorm.DB, site *models.Site, server *models.ServerWithSShKe
 			}
 		}
 
-		e, output := models.RunScriptable(db, "site", site.ID, client, commandToRun, summary, true, site.TeamId)
+		e, output := models.RunScriptable("site", site.ID, client, commandToRun, summary, true, site.TeamId)
 
 		if e != nil {
 			errors += 1
-			models.LogError(db, site.ID, "site",
+			models.LogError(site.ID, "site",
 				e.Error()+". Command output: "+output, "Failed to run: "+script, site.TeamId)
 			if strings.Contains(commandToRun, "# exit-on-failure=yes") {
 				break
 			}
 		} else {
-			models.LogInfo(db, site.ID, "site", output, "Successfully ran deploy: "+script, site.TeamId)
+			models.LogInfo(site.ID, "site", output, "Successfully ran deploy: "+script, site.TeamId)
 		}
 
 	}
@@ -124,7 +124,7 @@ func RunSiteBuild(db *gorm.DB, site *models.Site, server *models.ServerWithSShKe
 }
 
 func BuildSites(db *gorm.DB) {
-	sites := models.GetSitesToProcess(db)
+	sites := models.GetSitesToProcess()
 	queued := 0
 	var wg sync.WaitGroup
 
@@ -132,7 +132,7 @@ func BuildSites(db *gorm.DB) {
 		if queued%5 == 0 {
 			time.Sleep(20 * time.Second)
 		}
-		server := models.GetServer(db, site.ServerID, site.TeamId)
+		server := models.GetServer(site.ServerID, site.TeamId)
 		if server.Status != models.STATUS_COMPLETE {
 			if utils.LogVerbose() {
 				fmt.Println("Server " + server.ServerName + " is not ready to deploy sites. Please check build log for server.")

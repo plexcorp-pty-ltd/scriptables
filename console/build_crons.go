@@ -28,7 +28,7 @@ func processCron(db *gorm.DB, cron *models.Cron) {
 	cronFileVirtual := ""
 	var ServerCrons []*models.Cron
 
-	server := models.GetServer(db, cron.ServerID, cron.TeamID)
+	server := models.GetServer(cron.ServerID, cron.TeamID)
 
 	db.Table("crons").Where("server_id=? and deleted_at IS NULL", cron.ServerID).Scan(&ServerCrons)
 
@@ -39,7 +39,7 @@ func processCron(db *gorm.DB, cron *models.Cron) {
 	client, err := models.GetSSHClient(&server, false)
 	if err != nil {
 		setCronStatus(db, cron.ID, models.STATUS_FAILED)
-		models.LogError(db, cron.ID, "cron", err.Error(),
+		models.LogError(cron.ID, "cron", err.Error(),
 			"Failed to establish connection to server: "+server.ServerName, server.TeamId)
 		return
 	}
@@ -59,7 +59,7 @@ func processCron(db *gorm.DB, cron *models.Cron) {
 		err = client.Sftp().WriteFile(tmpCronPath, []byte(cronFileVirtual), 0644)
 
 		if err != nil {
-			models.LogError(db, cron.ID, "cron", err.Error(),
+			models.LogError(cron.ID, "cron", err.Error(),
 				"Failed to write tmp cron file for server: "+server.ServerName, server.TeamId)
 			return
 		}
@@ -77,15 +77,15 @@ func processCron(db *gorm.DB, cron *models.Cron) {
 	out, err := client.Script(cmd).Output()
 
 	if err != nil {
-		models.LogError(db, cron.ID, "cron", err.Error(),
+		models.LogError(cron.ID, "cron", err.Error(),
 			"Failed to update crons for: "+server.ServerName, server.TeamId)
 		setCronStatus(db, cron.ID, models.STATUS_FAILED)
 		return
 	}
 
-	models.LogInfo(db, cron.ID, "cron", string(out)+"\n --- cron list ---\n"+cronFileVirtual,
+	models.LogInfo(cron.ID, "cron", string(out)+"\n --- cron list ---\n"+cronFileVirtual,
 		"Cronfile update log", server.TeamId)
-	models.LogInfo(db, cron.ServerID, "server", string(out)+"\n --- cron list ---\n"+cronFileVirtual,
+	models.LogInfo(cron.ServerID, "server", string(out)+"\n --- cron list ---\n"+cronFileVirtual,
 		"Cronfile update log", server.TeamId)
 
 	setCronStatus(db, cron.ID, models.STATUS_COMPLETE)

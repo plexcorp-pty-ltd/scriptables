@@ -63,11 +63,11 @@ type SiteJoinServer struct {
 	TeamId                 int64
 }
 
-func GetSitesList(db *gorm.DB, page, perPage int, search, status string, teamId int64) []SiteJoinServer {
+func GetSitesList(page, perPage int, search, status string, teamId int64) []SiteJoinServer {
 	offset := (page - 1) * perPage
 	var sites []SiteJoinServer
 
-	query := db.Table("sites").Select("sites.*, servers.server_name").Where("sites.team_id=?", teamId).Joins(
+	query := GetDB().Table("sites").Select("sites.*, servers.server_name").Where("sites.team_id=?", teamId).Joins(
 		"left join servers on servers.ID = sites.server_id")
 
 	if search != "" {
@@ -84,41 +84,41 @@ func GetSitesList(db *gorm.DB, page, perPage int, search, status string, teamId 
 	return sites
 }
 
-func GetSiteByTokenAndId(db *gorm.DB, token string, id int64) *Site {
+func GetSiteByTokenAndId(token string, id int64) *Site {
 	var site *Site
-	db.Where("deploy_token=? and id=?", token, id).First(&site)
+	GetDB().Where("deploy_token=? and id=?", token, id).First(&site)
 	return site
 }
 
-func GetSiteById(db *gorm.DB, id int64, teamId int64) *Site {
+func GetSiteById(id int64, teamId int64) *Site {
 	var site *Site
-	db.Where("id=? and team_id = ?", id, teamId).First(&site)
+	GetDB().Where("id=? and team_id = ?", id, teamId).First(&site)
 	return site
 }
 
-func GetSiteByIdNoTeam(db *gorm.DB, id int64) *Site {
+func GetSiteByIdNoTeam(id int64) *Site {
 	var site *Site
-	db.Where("id=?", id).First(&site)
+	GetDB().Where("id=?", id).First(&site)
 	return site
 }
 
-func GetSitesToProcess(db *gorm.DB) []Site {
+func GetSitesToProcess() []Site {
 	var sites []Site
 
-	db.Table("sites").Where("status=?", STATUS_QUEUED).Scan(&sites)
+	GetDB().Table("sites").Where("status=?", STATUS_QUEUED).Scan(&sites)
 
 	return sites
 }
 
-func GetSitesToDeploy(db *gorm.DB) []int64 {
+func GetSitesToDeploy() []int64 {
 	var siteIds []int64
 
-	db.Table("site_queues").Select("site_id").Where("status=?", STATUS_QUEUED).Scan(&siteIds)
+	GetDB().Table("site_queues").Select("site_id").Where("status=?", STATUS_QUEUED).Scan(&siteIds)
 
 	return siteIds
 }
 
-func (site *Site) SubScriptableVars(db *gorm.DB, server *ServerWithSShKey, script string) string {
+func (site *Site) SubScriptableVars(server *ServerWithSShKey, script string) string {
 	username := utils.Slugify(site.SiteName)
 	script = strings.ReplaceAll(script, "#USERNAME#", server.NewSSHUsername)
 	script = strings.ReplaceAll(script, "#SITE_NAME#", site.SiteName)
@@ -135,7 +135,7 @@ func (site *Site) SubScriptableVars(db *gorm.DB, server *ServerWithSShKey, scrip
 	script = strings.ReplaceAll(script, "#USER_DIRECTORY#", "/home/"+username)
 
 	var user User
-	db.Table("users").Where("id", 1).Scan(&user)
+	GetDB().Table("users").Where("id", 1).Scan(&user)
 	script = strings.ReplaceAll(script, "#NOTIFY_EMAIL#", user.Email)
 
 	FPMPort := "90" + strings.ReplaceAll(site.PhpVersion, ".", "")

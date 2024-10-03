@@ -50,7 +50,7 @@ func runServerBuild(db *gorm.DB, server *models.ServerWithSShKey, scriptables []
 
 	client, err := sshclient.DialWithKey(server.ServerIP+":"+strconv.Itoa(port), username, pk, pass)
 	if err != nil {
-		models.LogError(db, server.ID, "server", "Cannot SSH into server: "+server.ServerName+" - "+server.ServerIP,
+		models.LogError(server.ID, "server", "Cannot SSH into server: "+server.ServerName+" - "+server.ServerIP,
 			"SSH connection failed:"+err.Error(), server.TeamId)
 		db.Model(&models.Server{}).Where("id", server.ID).Update("status", models.STATUS_FAILED)
 		return err
@@ -78,7 +78,7 @@ func runServerBuild(db *gorm.DB, server *models.ServerWithSShKey, scriptables []
 		file, err := os.Open(script)
 		if err != nil {
 			errors += 1
-			models.LogError(db, server.ID, "server", err.Error()+" "+err.Error(), "Failed to run: "+script, server.TeamId)
+			models.LogError(server.ID, "server", err.Error()+" "+err.Error(), "Failed to run: "+script, server.TeamId)
 			break
 		}
 
@@ -91,13 +91,13 @@ func runServerBuild(db *gorm.DB, server *models.ServerWithSShKey, scriptables []
 
 		if rerr != nil {
 			errors += 1
-			models.LogError(db, server.ID, "server", rerr.Error(), "Failed to run: "+script, server.TeamId)
+			models.LogError(server.ID, "server", rerr.Error(), "Failed to run: "+script, server.TeamId)
 			break
 		}
 
 		commandToRun := string(cmd)
 		commandToRun = server.SubScriptableVars(commandToRun)
-		commandToRun, parseError := parsers.ParseScriptImport(db, server, commandToRun)
+		commandToRun, parseError := parsers.ParseScriptImport(server, commandToRun)
 		if parseError {
 			if strings.Contains(commandToRun, "# exit-on-failure=yes") {
 				break
@@ -105,7 +105,7 @@ func runServerBuild(db *gorm.DB, server *models.ServerWithSShKey, scriptables []
 		}
 
 		// For scriptables within imports
-		commandToRun, parseError = parsers.ParseScriptImport(db, server, commandToRun)
+		commandToRun, parseError = parsers.ParseScriptImport(server, commandToRun)
 		commandToRun = server.SubScriptableVars(commandToRun)
 		if parseError {
 			if strings.Contains(commandToRun, "# exit-on-failure=yes") {
@@ -113,17 +113,17 @@ func runServerBuild(db *gorm.DB, server *models.ServerWithSShKey, scriptables []
 			}
 		}
 
-		e, output := models.RunScriptable(db, "server", server.ID, client, commandToRun, summary, true, server.TeamId)
+		e, output := models.RunScriptable("server", server.ID, client, commandToRun, summary, true, server.TeamId)
 
 		if e != nil {
 			errors += 1
-			models.LogError(db, server.ID, "server",
+			models.LogError(server.ID, "server",
 				e.Error()+". Command output: "+output, "Failed to run: "+script, server.TeamId)
 			if strings.Contains(commandToRun, "# exit-on-failure=yes") {
 				break
 			}
 		} else {
-			models.LogInfo(db, server.ID, "server", output, "Successfully built: "+script, server.TeamId)
+			models.LogInfo(server.ID, "server", output, "Successfully built: "+script, server.TeamId)
 		}
 
 	}
@@ -132,17 +132,17 @@ func runServerBuild(db *gorm.DB, server *models.ServerWithSShKey, scriptables []
 
 		packages := strings.Split(server.AptPackages, ",")
 		aptCmd := "sudo apt-get install -y " + strings.Join(packages, " ")
-		e, output := models.RunScriptable(db, "server", server.ID, client, aptCmd, "Install extra apt packages.",
+		e, output := models.RunScriptable("server", server.ID, client, aptCmd, "Install extra apt packages.",
 			true, server.TeamId)
-		models.RunScriptable(db, "server", server.ID,
+		models.RunScriptable("server", server.ID,
 			client, aptCmd, "Install extra apt packages.", true, server.TeamId)
 		if e != nil {
 			errors += 1
-			models.LogError(db, server.ID, "server", e.Error(),
+			models.LogError(server.ID, "server", e.Error(),
 				"Failed to install extra apt packages.", server.TeamId)
 
 		} else {
-			models.LogInfo(db, server.ID, "server", output,
+			models.LogInfo(server.ID, "server", output,
 				"Successfully installed extra packages.", server.TeamId)
 		}
 	}
@@ -157,7 +157,7 @@ func runServerBuild(db *gorm.DB, server *models.ServerWithSShKey, scriptables []
 }
 
 func BuildServers(db *gorm.DB) {
-	servers := models.GetQueuedBuids(db, 5)
+	servers := models.GetQueuedBuids(5)
 	var wg sync.WaitGroup
 	queued := 0
 
@@ -171,7 +171,7 @@ func BuildServers(db *gorm.DB) {
 		scripts_found := utils.GetScriptables(scriptable)
 
 		if len(scripts_found) == 0 {
-			models.LogError(db, s.ID, "server",
+			models.LogError(s.ID, "server",
 				"No scriptables found for this server type.", "No scripts to run.", s.TeamId)
 			continue
 		}
@@ -183,7 +183,7 @@ func BuildServers(db *gorm.DB) {
 			for _, scriptable := range scriptables {
 				scripts_found := utils.GetScriptables(scriptable)
 				if len(scripts_found) == 0 {
-					models.LogError(db, s.ID,
+					models.LogError(s.ID,
 						"server",
 						"Missing scriptable: "+scriptable+", please check that you've placed a folder with this name inside the scriptables folder.",
 						"Missing scriptable: "+scriptable, s.TeamId)
@@ -195,7 +195,7 @@ func BuildServers(db *gorm.DB) {
 		}
 
 		if len(scripts) == 0 {
-			models.LogError(db, s.ID,
+			models.LogError(s.ID,
 				"server",
 				"Sorry, nothing to do - no scripts found to run for this server.",
 				"No runnable scriptables found.", s.TeamId)
@@ -206,7 +206,7 @@ func BuildServers(db *gorm.DB) {
 			scripts_found := utils.GetScriptables("certbot")
 
 			if len(scripts_found) == 0 {
-				models.LogError(db, s.ID, "server",
+				models.LogError(s.ID, "server",
 					"No certbot scriptables found for this server type.", "No certbot scripts to run.", s.TeamId)
 				continue
 			}
@@ -219,7 +219,7 @@ func BuildServers(db *gorm.DB) {
 			scripts_found := utils.GetScriptables("redis")
 
 			if len(scripts_found) == 0 {
-				models.LogError(db, s.ID, "server",
+				models.LogError(s.ID, "server",
 					"No redis scriptables found for this server type.", "No redis scripts to run.", s.TeamId)
 				continue
 			}
@@ -231,7 +231,7 @@ func BuildServers(db *gorm.DB) {
 			scripts_found := utils.GetScriptables("memcache")
 
 			if len(scripts_found) == 0 {
-				models.LogError(db, s.ID, "server", "No memcache scriptables found for this server type.",
+				models.LogError(s.ID, "server", "No memcache scriptables found for this server type.",
 					"No memcache scripts to run.", s.TeamId)
 				continue
 			}

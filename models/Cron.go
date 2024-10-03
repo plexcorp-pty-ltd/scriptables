@@ -31,11 +31,11 @@ func IsValidCronExpression(input string) bool {
 	return err == nil
 }
 
-func GetCrons(db *gorm.DB, page, perPage int, search string, teamId int64) []CronServer {
+func GetCrons(page, perPage int, search string, teamId int64) []CronServer {
 	offset := (page - 1) * perPage
 	var crons []CronServer
 
-	query := db.Table("crons").Select(
+	query := GetDB().Table("crons").Select(
 		"crons.*,servers.server_name",
 	).Where("crons.team_id = ?", teamId).Joins(" JOIN servers ON (crons.server_id = servers.ID)")
 

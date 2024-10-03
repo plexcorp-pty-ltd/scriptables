@@ -4,32 +4,30 @@ package parsers
 
 import (
 	"io"
-	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
 
-	"gorm.io/gorm"
 	"plexcorp.tech/scriptable/models"
 )
 
-func parseServerImport(lineNumber int, script string, db *gorm.DB, server *models.ServerWithSShKey, line string) (string, bool) {
+func parseServerImport(lineNumber int, script string, server *models.ServerWithSShKey, line string) (string, bool) {
 	originalLine := line
 	line = strings.ReplaceAll(line, "SCRIPTABLE::IMPORT", "")
 	line = strings.ReplaceAll(line, " ", "")
 	imported, err := os.Open("./scriptables/__shared/" + line + ".sh")
 	if err != nil {
-		models.LogError(db, server.ID, "server", "Failed to import scriptable code at line: "+strconv.Itoa(lineNumber)+". "+err.Error(),
+		models.LogError(server.ID, "server", "Failed to import scriptable code at line: "+strconv.Itoa(lineNumber)+". "+err.Error(),
 			"Failed to parse scriptable: "+script, server.TeamId)
 		return script, true
 	}
 
 	defer imported.Close()
 
-	importedCmd, rerr := ioutil.ReadAll(imported)
+	importedCmd, rerr := io.ReadAll(imported)
 
 	if rerr != nil {
-		models.LogError(db, server.ID, "server", "Failed to import scriptable code at line: "+strconv.Itoa(lineNumber)+". "+err.Error(),
+		models.LogError(server.ID, "server", "Failed to import scriptable code at line: "+strconv.Itoa(lineNumber)+". "+err.Error(),
 			"Failed to parse scriptable: "+script, server.TeamId)
 		return script, true
 	}
@@ -39,13 +37,13 @@ func parseServerImport(lineNumber int, script string, db *gorm.DB, server *model
 	return script, false
 }
 
-func ParseScriptImport(db *gorm.DB, server *models.ServerWithSShKey, script string) (string, bool) {
+func ParseScriptImport(server *models.ServerWithSShKey, script string) (string, bool) {
 	var failed bool = false
 	if strings.Contains(script, "SCRIPTABLE::") {
 		lines := strings.Split(script, "\n")
 		for i, line := range lines {
 			if strings.Contains(line, "SCRIPTABLE::IMPORT") {
-				script, failed = parseServerImport(i, script, db, server, line)
+				script, failed = parseServerImport(i, script, server, line)
 				if failed {
 					return script, failed
 				}
@@ -56,7 +54,7 @@ func ParseScriptImport(db *gorm.DB, server *models.ServerWithSShKey, script stri
 	return script, failed
 }
 
-func ParseSiteScriptable(db *gorm.DB, site *models.Site, script string) (string, bool) {
+func ParseSiteScriptable(site *models.Site, script string) (string, bool) {
 	var failed bool = false
 
 	if strings.Contains(script, "SCRIPTABLE::") {
@@ -68,7 +66,7 @@ func ParseSiteScriptable(db *gorm.DB, site *models.Site, script string) (string,
 				line = strings.ReplaceAll(line, " ", "")
 				imported, err := os.Open("./scriptables/__shared/" + line + ".sh")
 				if err != nil {
-					models.LogError(db, site.ID, "server", "Failed to import scriptable code at line: "+strconv.Itoa(lineNumber)+". "+err.Error(),
+					models.LogError(site.ID, "server", "Failed to import scriptable code at line: "+strconv.Itoa(lineNumber)+". "+err.Error(),
 						"Failed to parse scriptable: "+script, site.TeamId)
 					return script, true
 				}
@@ -78,7 +76,7 @@ func ParseSiteScriptable(db *gorm.DB, site *models.Site, script string) (string,
 				importedCmd, rerr := io.ReadAll(imported)
 
 				if rerr != nil {
-					models.LogError(db, site.ID, "site", "Failed to import scriptable code at line: "+strconv.Itoa(lineNumber)+". "+err.Error(),
+					models.LogError(site.ID, "site", "Failed to import scriptable code at line: "+strconv.Itoa(lineNumber)+". "+err.Error(),
 						"Failed to parse scriptable: "+script, site.TeamId)
 					return script, true
 				}
