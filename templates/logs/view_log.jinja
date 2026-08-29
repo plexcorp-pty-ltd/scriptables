@@ -1,8 +1,30 @@
 <!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+
 <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>Viewing full raw log</title>
+    <link rel="stylesheet" href="/static/tabler/css/tabler.min.css" />
 </head>
-<body style="background-color: #0e0d0dd4;color:#fff;font-size:1rem;">
-<pre>{{log}}</pre>
+
+<body>
+    <div class="page">
+        <div class="page-wrapper">
+            <div class="page-body">
+                <div class="container-xl">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Raw log</h3>
+                        </div>
+                        <div class="card-body">
+                            <pre class="mb-0" style="white-space: pre-wrap; word-break: break-word;">{{log}}</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
+
 </html>

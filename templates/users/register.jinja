@@ -1,41 +1,36 @@
-<div class="row">
-    <div class="col-md-12 mb-2">
-        Welcome to Scriptables, to get started - please setup your admin user account below.
-  
-    </div>
-</div>
+<p class="text-secondary mb-4">
+  Welcome to Scriptables. Set up your admin account below to get started.
+</p>
 
 <form action="/users/register/complete" method="post">
-    <div class="input-group mb-3">
-        <input type="text" required class="form-control" value="{{name}}" name="name" placeholder="Your Name*">
+  <input type="hidden" name="_csrf_token" value="{{_csrf_token}}" />
 
-    </div>
+  <div class="mb-3">
+    <label class="form-label required">Your name</label>
+    <input type="text" name="name" value="{{name}}" class="form-control" placeholder="Jane Doe" required />
+  </div>
 
-    <div class="input-group mb-3">
-        <input type="email" required class="form-control" value="{{email}}" name="email" placeholder="Your Email*">
+  <div class="mb-3">
+    <label class="form-label required">Email address</label>
+    <input type="email" name="email" value="{{email}}" class="form-control" placeholder="you@example.com" required />
+  </div>
 
-    </div>
+  <div class="mb-3">
+    <label class="form-label required">Team name</label>
+    <input type="text" name="team" value="{{team}}" class="form-control" placeholder="Your team" required />
+  </div>
 
-   <div class="input-group mb-3">
-        <input type="text" required class="form-control" value="{{team}}" name="team" placeholder="Your Team Name*">
+  <div class="mb-3">
+    <label class="form-label required">Password</label>
+    <input type="password" name="password" class="form-control" autocomplete="new-password" required />
+  </div>
 
-    </div>
+  <div class="mb-3">
+    <label class="form-label required">Confirm password</label>
+    <input type="password" name="password_confirm" class="form-control" autocomplete="new-password" required />
+  </div>
 
-    <div class="input-group mb-3">
-        <input type="password" class="form-control" required name="password" placeholder="Password*">
- 
-    </div>
-    <div class="input-group mb-3">
-        <input type="password" required class="form-control" name="password_confirm" placeholder="Confirm password*">
- 
-    </div>
-    <div class="row">
-        <div class="col-12">
-                    <input type="hidden" name="_csrf_token" value="{{_csrf_token}}" />
-
-            <button type="submit" class="btn btn-primary btn-block">Create Account</button>
-
-            <br />
-        </div>
-
+  <div class="form-footer">
+    <button type="submit" class="btn btn-primary w-100">Create account</button>
+  </div>
 </form>

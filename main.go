@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	"gorm.io/gorm"
 	"plexcorp.tech/scriptable/console"
 	"plexcorp.tech/scriptable/controllers"
@@ -51,7 +52,36 @@ func RunJobs() {
 
 }
 
+// loadEnv reads the .env file sitting next to the binary or in the working
+// directory. Real environment variables always win, so a value exported in the
+// shell (or set by docker compose) overrides the file.
+func loadEnv() {
+	path := os.Getenv("SCRIPTABLES_ENV_FILE")
+	if path == "" {
+		path = ".env"
+	}
+
+	if err := godotenv.Load(path); err != nil {
+		if !os.IsNotExist(err) {
+			fmt.Println("Could not read", path, "-", err)
+			return
+		}
+
+		// Running under docker compose the variables come from env_file instead,
+		// so a missing .env on disk is not an error.
+		fmt.Println("No", path, "file found, relying on the environment.")
+	}
+}
+
 func main() {
+	loadEnv()
+
+	// gin reads GIN_MODE in its own init(), which runs before .env is loaded, so
+	// apply it here instead.
+	if mode := os.Getenv("GIN_MODE"); mode != "" {
+		gin.SetMode(mode)
+	}
+
 	location, err := time.LoadLocation(os.Getenv("TZ"))
 	if err != nil {
 		fmt.Println("Timezone entered is invalid:", err)
@@ -79,8 +109,20 @@ func main() {
 	router := gin.Default()
 	router.StaticFS("/static", http.Dir("./static"))
 
-	allowedIps := os.Getenv("allowed_ips")
-	router.SetTrustedProxies(strings.Split(allowedIps, ","))
+	// An empty list means trust no proxy, which is the right default when
+	// Scriptables runs locally. Passing strings.Split("", ",") would hand gin a
+	// single empty string and fail to parse.
+	var trustedProxies []string
+	for _, ip := range strings.Split(os.Getenv("ALLOWED_IPS"), ",") {
+		if ip = strings.TrimSpace(ip); ip != "" {
+			trustedProxies = append(trustedProxies, ip)
+		}
+	}
+
+	if err := router.SetTrustedProxies(trustedProxies); err != nil {
+		fmt.Println("Invalid ALLOWED_IPS:", err)
+		return
+	}
 
 	router.Use(middleware.DBMiddleware())
 	router.Use(middleware.SetupSession())
@@ -133,11 +175,6 @@ func main() {
 	router.POST("/server/firewall/delete/rule", controller.DeleteFirewallRule)
 	router.POST("/server/firewall/add/rule", controller.AddFirewallRule)
 
-	router.GET("/sshkeys", controller.SshKeys)
-	router.GET("/sshkey/create", controller.CreateSShKey)
-	router.GET("/sshkey/edit/:id", controller.EditSShKey)
-	router.POST("/sshkey/save", controller.SaveSShKey)
-
 	router.GET("/site/deployKey/:id", controller.CreateSiteDeployKey)
 	router.POST("/site/generateDeployKey", controller.GenerateDeployKey)
 	router.POST("/site/deploy/", controller.DeployBranch)
@@ -156,8 +193,6 @@ func main() {
 	router.POST("/cron/retrybuild", controller.RetryCronBuild)
 
 	router.GET("/systemd/services/:id/list", controller.ListServices)
-
-	router.GET("/guide", controller.ShowGuide)
 
 	router.GET("/webhooks/deploy/:sid/:token", controller.DeployWebhookSite)
 

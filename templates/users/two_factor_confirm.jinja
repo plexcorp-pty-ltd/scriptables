@@ -1,24 +1,23 @@
-
-<p>Please check your google authenticator app for an OTP code.</p>
+<p class="text-secondary mb-4">
+  Open your Google Authenticator app and enter the one time code it shows for Scriptables.
+</p>
 
 <form action="/users/2fa/authenticate" method="post">
-<div class="input-group mb-3">
-<input type="text" class="form-control" name="two_factor_code" required placeholder="Please enter 2factor code">
+  <input type="hidden" name="_csrf_token" value="{{_csrf_token}}" />
+  <input type="hidden" name="password" value="{{password}}" />
+  <input type="hidden" name="email" value="{{email}}" />
 
-</div>
-<div class="input-group mb-3">
-<input type="hidden" class="form-control" name="password" value="{{password}}">
-<input type="hidden" class="form-control" name="email" value="{{email}}">
-<input type="hidden" name="_csrf_token" value="{{_csrf_token}}" />
+  <div class="mb-3">
+    <label class="form-label">One time code</label>
+    <input type="text" name="two_factor_code" class="form-control" inputmode="numeric" autocomplete="one-time-code"
+      placeholder="123456" required autofocus />
+  </div>
 
-</div>
-<div class="row">
-<div class="col-12">
-
-<button type="submit" class="btn btn-primary btn-block">Confirm OTP</button>
-
-<br />
-</div>
-
-&nbsp;&nbsp;<a href="/users/login" class=""><< Restart login</a>
+  <div class="form-footer">
+    <button type="submit" class="btn btn-primary w-100">Confirm code</button>
+  </div>
 </form>
+
+<div class="text-center text-secondary mt-3">
+  <a href="/users/login">Restart sign in</a>
+</div>

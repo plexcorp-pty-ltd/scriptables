@@ -24,6 +24,8 @@ RUN rm /home/$USER/app/.env
 
 RUN chown -R $USER:$USER /home/$USER
 
+ENV HOME="/home/$USER"
+
 WORKDIR /home/$USER/app
 USER $USER
 

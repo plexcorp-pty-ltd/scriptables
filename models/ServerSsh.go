@@ -10,24 +10,15 @@ import (
 	"plexcorp.tech/scriptable/utils"
 )
 
-func GetSSHClient(server *ServerWithSShKey, intialConnect bool) (*sshclient.Client, error) {
-	pk := utils.Decrypt(server.PrivateKey)
-	pass := ""
-
-	if server.Passphrase != "" {
-		pass = utils.Decrypt(server.Passphrase)
-	}
-
-	var client *sshclient.Client
-	var err error
-
+// GetSSHClient connects to a server using the SSH keys already present on this
+// machine (~/.ssh, plus anything loaded into a running ssh-agent). Scriptables
+// runs natively, so there are no keys to store or manage in the app itself.
+func GetSSHClient(server *ServerDetails, intialConnect bool) (*sshclient.Client, error) {
 	if intialConnect {
-		client, err = sshclient.DialWithKey(server.ServerIP+":"+strconv.Itoa(server.SshPort), server.SSHUsername, pk, pass)
-
-	} else {
-		client, err = sshclient.DialWithKey(server.ServerIP+":"+strconv.Itoa(server.NewSshPort), server.NewSSHUsername, pk, pass)
+		return sshclient.DialWithLocalKeys(server.ServerIP+":"+strconv.Itoa(server.SshPort), server.SSHUsername)
 	}
-	return client, err
+
+	return sshclient.DialWithLocalKeys(server.ServerIP+":"+strconv.Itoa(server.NewSshPort), server.NewSSHUsername)
 }
 
 func RunScriptable(db *gorm.DB, entity string, id int64, client *sshclient.Client, cmd string, summary string, logtask bool, teamId int64) (error, string) {

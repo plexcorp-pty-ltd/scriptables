@@ -1,0 +1,24 @@
+{# Returned when the SSH connection test fails. A successful test answers with an
+   HX-Redirect header instead, sending the browser to the build log. #}
+<div class="alert alert-danger mb-0" role="alert">
+  <div class="d-flex">
+    <div class="me-3"><i class="ti ti-alert-circle icon alert-icon"></i></div>
+    <div>
+      <h4 class="alert-title">Connection failed</h4>
+      <div class="text-secondary">{{ errorMsg }}</div>
+      <div class="text-secondary mt-2">
+        Check the server IP and that one of the SSH keys on this machine is authorised on it.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="btn-list mt-3 justify-content-center">
+  <a href="/server/update/{{ id }}" class="btn btn-primary">
+    <i class="ti ti-edit me-2"></i>Edit server settings
+  </a>
+  <button class="btn" hx-post="/server/test-ssh-ajax/{{ id }}" hx-target="#sshtest-result" hx-swap="innerHTML"
+    hx-indicator="#sshtest-progress">
+    <i class="ti ti-reload me-2"></i>Try again
+  </button>
+</div>

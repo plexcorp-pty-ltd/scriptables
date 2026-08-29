@@ -1,167 +1,161 @@
-<div class="row">
-<div class="col-md-12">
-<h2 class="az-dashboard-title">Setup new site</h2>
+<div class="page-header d-print-none mb-3">
+  <div class="row g-2 align-items-center">
+    <div class="col">
+      <div class="page-pretitle">Sites</div>
+      <h2 class="page-title">Set up a new site</h2>
+    </div>
   </div>
+</div>
 
-    <div class="col-md-12">
-      <div class="card card-info">
-  
-        <form class="form-horizontal" method="post" action="/site/save/">
-          <input type="hidden" name="csrftoken" value="{{csrftoken}}" />
-          <div class="card-body">
-  
+<form method="post" action="/site/save/">
+  <input type="hidden" name="_csrf_token" value="{{_csrf_token}}" />
 
-            <div class="form-group row">
-              <label class="col-sm-2 col-form-label"
-                >Domain Name*</label
-              >
-              <div class="col-sm-10">
-                  <input class="form-control" required name="domain" value="{{domain}}" />
-              </div>
+  <div class="row row-cards">
+    <div class="col-lg-7">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Site</h3>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label required">Domain name</label>
+            <input class="form-control" required name="domain" value="{{domain}}" placeholder="example.com" />
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label required">Server</label>
+              <select class="form-select" required name="server_id">
+                {% for server in servers %}
+                <option value="{{server.ID}}" {% if server._id == server_id %}selected{% endif %}>
+                  {{server.ServerName}}
+                </option>
+                {% endfor %}
+              </select>
             </div>
 
-            <div class="form-group row">
-                <label class="col-sm-2 col-form-label"
-                  >Server*</label
-                >
-                <div class="col-sm-10">
-                    <select class="form-control" required name="server_id">
-                        {% for server in servers %}
-                            <option value="{{server.ID}}" {% if server._id == server_id %} selected {% endif %}>{{server.ServerName}}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-              </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label required">Site type</label>
+              <select name="scriptables" class="form-select" required>
+                <option value="laravel" selected>Laravel</option>
+              </select>
+            </div>
+          </div>
 
-              <div class="form-group row">
-                <label class="col-sm-2 col-form-label"
-                  >Site type*</label>
-                <div class="col-sm-10">
+          <div class="mb-3">
+            <label class="form-label required">Webroot</label>
+            <input class="form-control" required name="webroot" value="{{webroot}}" placeholder="public" />
+            <small class="form-hint">
+              Where your <code>index.php</code> lives, relative to the project root.
+            </small>
+          </div>
 
-                     <select name="scriptables" class="form-control" required>
-                          <option value="laravel" selected>Laravel</option>
-                     </select>
+          <div class="row">
+            <div class="col-md-8 mb-3">
+              <label class="form-label required">Git URL</label>
+              <input class="form-control" required name="git_url" value="{{git_url}}"
+                placeholder="git@github.com:you/app.git" />
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label required">Git branch</label>
+              <input class="form-control" required name="branch" value="{{branch}}" placeholder="main" />
+            </div>
+          </div>
 
-                </div>
-              </div>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label required">PHP version</label>
+              <select class="form-select" required name="php_version">
+                <option value="8.5" {% if php_version == "8.5" %}selected{% endif %}>8.5</option>
+                <option value="8.4" {% if php_version == "8.4" %}selected{% endif %}>8.4</option>
+                <option value="8.3" {% if php_version == "8.3" %}selected{% endif %}>8.3</option>
+              </select>
+            </div>
 
-            <div class="form-group row">
-                <label class="col-sm-2 col-form-label"
-                  >Webroot*</label
-                >
-                <div class="col-sm-10">
-                    <input class="form-control" required name="webroot" value="{{webroot}}" />
-                    <i>Where can we find your index.php file relative to the root folder? e.g. : public/</i>
-                </div>
-              </div>
-  
+            <div class="col-md-6 mb-3">
+              <label class="form-label">HTTPS</label>
+              <label class="form-check form-switch mt-2">
+                <input class="form-check-input" type="checkbox" name="letsencrypt_certificate" {% if
+                  LetsEncryptCertificate == 1 %}checked{% endif %} />
+                <span class="form-check-label">Set up a Let's Encrypt certificate</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
+    <div class="col-lg-5">
+      <div class="card mb-3">
+        <div class="card-header">
+          <h3 class="card-title">Database</h3>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label">
+              MySQL password
+              <span class="form-label-description">
+                <a href="#" class="link-secondary" onclick="togglePasswordVisibility('mysql_password', event)">
+                  <i class="ti ti-eye"></i>
+                </a>
+              </span>
+            </label>
+            <input type="password" class="form-control" id="mysql_password" name="mysql_password"
+              value="{{mysql_password}}" />
+          </div>
 
-            <div class="form-group row">
-                <label class="col-sm-2 col-form-label"
-                  >GIT Url*</label
-                >
-                <div class="col-sm-10">
-                    <input class="form-control" required name="git_url" value="{{git_url}}" />
-                </div>
-              </div>
-              <div class="form-group row">
-                <label class="col-sm-2 col-form-label"
-                  >GIT Branch*</label
-                >
-                <div class="col-sm-10">
-                    <input class="form-control" required name="branch" value="{{branch}}" />
-                </div>
-              </div>
-              <div class="form-group row">
-                <label class="col-sm-2 col-form-label"
-                  >PHP Version*</label
-                >
-                <div class="col-sm-10">
-                    <select class="form-control" required name="php_version">
-                        <option value="8.2"  {% if php_version == "8.2" %} selected {% endif %}>8.2</option>
-                        <option value="8.1"  {% if php_version == "8.1" %} selected {% endif %}>8.1</option>
-                        <option value="7.4"  {% if php_version == "7.4" %} selected {% endif %}>7.4</option>
-                        <option value="7.3"  {% if php_version == "7.3" %} selected {% endif %}>7.3</option>
-                        <option value="7.2" {% if php_version == "7.2" %} selected {% endif %}>7.2</option>
-                    </select>
-                </div>
-              </div>
+          <div>
+            <label class="form-label">
+              Confirm MySQL password
+              <span class="form-label-description">
+                <a href="#" class="link-secondary" onclick="togglePasswordVisibility('mysql_password_confirm', event)">
+                  <i class="ti ti-eye"></i>
+                </a>
+              </span>
+            </label>
+            <input type="password" class="form-control" id="mysql_password_confirm" name="mysql_password_confirm"
+              value="{{mysql_password_confirm}}" />
+          </div>
+        </div>
+      </div>
 
-              <div class="form-group row">
-                <label class="col-sm-2 col-form-label"
-                  >Setup HTTPS (lets encrypt)</label
-                >
-                <div class="col-sm-10">
-                    <input type="checkbox" name="letsencrypt_certificate" {% if LetsEncryptCertificate == 1 %} checked {% endif %} style="vertical-align:middle"/>
-                </div>
-              </div>
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Environment</h3>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label required">
+              Config file
+              <span class="form-help" data-bs-toggle="tooltip" title="The .env file to use when setting up your site.">?</span>
+            </label>
+            <input type="text" value="{{environment}}" class="form-control"
+              placeholder="prod.env, dev.env, staging.env" name="environment" />
+          </div>
 
-              <div class="form-group row">
-                <label class="col-sm-2 col-form-label"
-                  >Config file* <i class="fas fa-question-circle" title="The .env file to use when setting up your site."></i></label
-                >
-                <div class="col-sm-10">
-                    <input type="text" value="{{environment}}" class="form-control" placeholder="any .env file eg prod.env, dev.env, staging.env" name="environment" />
-                    <br />
-                                    <strong>Note:</strong> Please replace the following variables in your ENV file so that Scriptables can inject the database settings.
-                <pre>
-DB_DATABASE=PLEX_MYSQL_DB
+          <p class="text-secondary mb-2">
+            <strong>Note:</strong> use these placeholders in your env file so Scriptables can inject the
+            database settings.
+          </p>
+          <pre class="mb-0"><code>DB_DATABASE=PLEX_MYSQL_DB
 DB_USERNAME=PLEX_MYSQL_USERNAME
-DB_PASSWORD="PLEX_MYSQL_PASSWORD"
+DB_PASSWORD="PLEX_MYSQL_PASSWORD"</code></pre>
+        </div>
 
-                </pre>
-
-                </div>
-
-              </div>
-
-              <div class="row mb-4 mt-4">
-                <div class="col-md-6">
-                      <label>MySQL Password <a class="toggle-icon" onclick="togglePasswordVisibility('mysql_password', event)">
-                        <i class="fas fa-eye" style="color:#000;"></i>
-                      </a></label>
-                    <input type="password" class="form-control" id="mysql_password" name="mysql_password" value="{{mysql_password}}" />
-          
-    
-                </div>
-    
-                <div class="col-md-6">
-          
-    
-                  <label>Confirm MySQL Password <a class="toggle-icon" onclick="togglePasswordVisibility('mysql_password_confirm', event)">
-                    <i class="fas fa-eye" style="color:#000;"></i>
-                  </a></label>
-                  <input type="password" class="form-control" id="mysql_password_confirm" name="mysql_password_confirm" value="{{mysql_password_confirm}}" />
-
-    
-    
-                </div>
-    
-              </div>
-          </div>
-  
-          <div class="card-footer">
-            <button type="submit" class="btn btn-primary">NEXT</button>
-  
-          </div>
-        </form>
+        <div class="card-footer">
+          <button type="submit" class="btn btn-primary w-100">
+            Next<i class="ti ti-arrow-right ms-2"></i>
+          </button>
+        </div>
       </div>
     </div>
   </div>
-  <script>
-    function togglePasswordVisibility(name, event) {
-      event.preventDefault();
-        var passwordInput = document.getElementById(name);
-        var toggleIcon = document.querySelector(".toggle-icon");
-  
-        if (passwordInput.type === "password") {
-            passwordInput.type = "text";
-            toggleIcon.classList.add("active");
-        } else {
-            passwordInput.type = "password";
-            toggleIcon.classList.remove("active");
-        }
-    }
-  </script>
-  
+</form>
+
+<script>
+  function togglePasswordVisibility(name, event) {
+    event.preventDefault();
+    var passwordInput = document.getElementById(name);
+    passwordInput.type = passwordInput.type === "password" ? "text" : "password";
+  }
+</script>

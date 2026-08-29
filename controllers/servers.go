@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -10,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/noirbizarre/gonja"
 	"plexcorp.tech/scriptable/models"
+	"plexcorp.tech/scriptable/sshclient"
 	"plexcorp.tech/scriptable/utils"
 )
 
@@ -94,21 +96,15 @@ func (c *Controller) RetryBuildServer(gctx *gin.Context) {
 }
 
 func (c *Controller) CreateServer(gctx *gin.Context) {
-	var countSshKeys int64
-	sessUser := c.GetSessionUser(gctx)
-
-	c.GetDB(gctx).Table("ssh_keys").Where("team_id=?", sessUser.TeamId).Count(&countSshKeys)
-	if countSshKeys == 0 {
+	if _, err := sshclient.LocalSigners(); err != nil {
 		c.Render("general/warning", gonja.Context{
-			"title":      "SSH keys not found",
-			"warningMsg": "Please add at least one SSH Key <a href=\"/sshkey/create\"> here</a> first before trying to build a server.",
+			"title":      "No usable SSH keys found",
+			"warningMsg": "Scriptables uses the SSH keys already on this machine. " + err.Error(),
 		}, gctx)
 
 		return
 	}
 
-	keys := []models.SshKey{}
-	c.GetDB(gctx).Where("team_id=?", sessUser.TeamId).Find(&keys)
 	serverType := gctx.Param("servertype")
 
 	server := models.Server{ServerType: serverType}
@@ -123,14 +119,16 @@ func (c *Controller) CreateServer(gctx *gin.Context) {
 		errors = models.ValidateForm(gctx, &server)
 	}
 
+	signers, _ := sshclient.LocalSigners()
+
 	vars := gonja.Context{
 		"serverTypes":       models.GetServerTypes(),
-		"sshKeys":           keys,
+		"sshDir":            sshclient.SshDir(),
+		"sshKeyCount":       len(signers),
 		"ServerName":        server.ServerName,
 		"ServerType":        server.ServerType,
 		"ServerIP":          server.ServerIP,
 		"PrivateServerIP":   server.PrivateServerIP,
-		"SSHKeyId":          server.SSHKeyId,
 		"SSHUsername":       server.SSHUsername,
 		"NewSSHUsername":    server.NewSSHUsername,
 		"Redis":             server.Redis,
@@ -145,10 +143,16 @@ func (c *Controller) CreateServer(gctx *gin.Context) {
 		"SshPort":           server.SshPort,
 		"NewSshPort":        server.NewSshPort,
 		"AptPackages":       server.AptPackages,
+		"isExisting":        models.IsExistingServer(server.ServerType),
 		"action":            "/server/create/" + server.ServerType,
 		"actionType":        "BUILD SERVER",
 		"title":             "Build new " + server.ServerType + " server",
 		"highlight":         "servers",
+	}
+
+	if models.IsExistingServer(server.ServerType) {
+		vars["actionType"] = "CONNECT SERVER"
+		vars["title"] = "Connect an existing server"
 	}
 
 	if gctx.Request.Method == http.MethodPost && len(errors) > 0 {
@@ -176,10 +180,8 @@ func (c *Controller) CreateServer(gctx *gin.Context) {
 }
 
 func (c *Controller) UpdateServer(gctx *gin.Context) {
-	keys := []models.SshKey{}
 	sessUser := c.GetSessionUser(gctx)
 	db := c.GetDB(gctx)
-	db.Where("team_id=?", sessUser.TeamId).Find(&keys)
 
 	serverId, _ := strconv.ParseInt(gctx.Param("id"), 10, 64)
 	server := models.GetServerSimple(db, serverId, sessUser.TeamId)
@@ -194,14 +196,16 @@ func (c *Controller) UpdateServer(gctx *gin.Context) {
 		errors = models.ValidateForm(gctx, server)
 	}
 
+	signers, _ := sshclient.LocalSigners()
+
 	vars := gonja.Context{
 		"serverTypes":       models.GetServerTypes(),
-		"sshKeys":           keys,
+		"sshDir":            sshclient.SshDir(),
+		"sshKeyCount":       len(signers),
 		"ServerName":        server.ServerName,
 		"ServerType":        server.ServerType,
 		"ServerIP":          server.ServerIP,
 		"PrivateServerIP":   server.PrivateServerIP,
-		"SSHKeyId":          server.SSHKeyId,
 		"SSHUsername":       server.SSHUsername,
 		"NewSSHUsername":    server.NewSSHUsername,
 		"Redis":             server.Redis,
@@ -216,6 +220,7 @@ func (c *Controller) UpdateServer(gctx *gin.Context) {
 		"SshPort":           server.SshPort,
 		"NewSshPort":        server.NewSshPort,
 		"AptPackages":       server.AptPackages,
+		"isExisting":        models.IsExistingServer(server.ServerType),
 		"action":            fmt.Sprintf("/server/update/%d", server.ID),
 		"actionType":        "UPDATE SERVER",
 		"title":             "Update server: " + server.ServerName,
@@ -265,45 +270,56 @@ func (c *Controller) ShowTestConnectionLoader(gctx *gin.Context) {
 	}, gctx)
 }
 
+// TestSSHConnection is called by htmx from the connection test page. On success
+// it answers with an HX-Redirect so the browser moves straight to the build log;
+// on failure it returns an inline alert fragment explaining what went wrong.
 func (c *Controller) TestSSHConnection(gctx *gin.Context) {
 	id, _ := strconv.ParseInt(gctx.Param("id"), 10, 64)
 	sessUser := c.GetSessionUser(gctx)
 	db := c.GetDB(gctx)
-	server := models.GetServer(db, id, sessUser.TeamId)
 
 	if !models.IsMyServer(db, id, sessUser.TeamId) {
 		gctx.Redirect(http.StatusFound, "/denied")
 		return
 	}
 
-	response := make(map[string]string)
-	errorMsg := "Sorry, connection failed. Please check your server settings especially the SSH key - it should be the same key used when creating the server."
+	server := models.GetServer(db, id, sessUser.TeamId)
 
-	response["id"] = fmt.Sprintf("%d", server.ID)
-	response["status"] = "failed"
-	response["message"] = errorMsg
+	fail := func(reason string) {
+		db.Exec("UPDATE servers set status=? WHERE id = ?", models.STATUS_FAILED, id)
+		c.RenderWithoutLayout("servers/_sshtest_result", gonja.Context{
+			"id":       id,
+			"errorMsg": reason,
+		}, gctx)
+	}
 
 	if server.ID == 0 {
-		response["status"] = "failed"
-		response["message"] = errorMsg
-		gctx.JSON(http.StatusBadRequest, response)
+		fail("That server could not be found.")
 		return
 	}
 
 	connection, err := models.GetSSHClient(&server, true)
-	if err == nil {
-		connection.Close()
-		c.GetDB(gctx).Exec("UPDATE servers SET status=? WHERE id=?", models.STATUS_QUEUED, server.ID)
-		response["status"] = "success"
-		response["message"] = "Success! now attempting deploy. Please check server logs for progress and more information."
-		gctx.JSON(http.StatusOK, response)
+	if err != nil {
+		fail("Could not open an SSH connection to " + server.ServerIP + ": " + err.Error())
 		return
-	} else {
-		c.GetDB(gctx).Exec("UPDATE servers set status=? WHERE id = ?", models.STATUS_FAILED, server.ID)
 	}
 
-	gctx.JSON(http.StatusBadRequest, response)
+	connection.Close()
 
+	// An existing server is left exactly as it is. Marking it complete keeps the
+	// build daemon, which only picks up queued servers, away from it.
+	if models.IsExistingServer(server.ServerType) {
+		db.Exec("UPDATE servers SET status=? WHERE id=?", models.STATUS_COMPLETE, server.ID)
+		c.FlashSuccess(gctx, "Connected to "+server.ServerName+". The server was left untouched.")
+		gctx.Header("HX-Redirect", "/servers")
+		gctx.Status(http.StatusOK)
+		return
+	}
+
+	db.Exec("UPDATE servers SET status=? WHERE id=?", models.STATUS_QUEUED, server.ID)
+
+	gctx.Header("HX-Redirect", fmt.Sprintf("/logs/server/%d", server.ID))
+	gctx.Status(http.StatusOK)
 }
 
 func (c *Controller) FirewallRules(gctx *gin.Context) {
@@ -326,52 +342,57 @@ func (c *Controller) FirewallRules(gctx *gin.Context) {
 	}, gctx)
 }
 
+// renderFirewallRules returns the rules table fragment that htmx swaps into the
+// page. Every firewall action ends here so the list always reflects the real
+// ufw state rather than something patched together in the browser.
+func (c *Controller) renderFirewallRules(gctx *gin.Context, serverID int64, successMsg string, actionErr error) {
+	db := c.GetDB(gctx)
+	sessUser := c.GetSessionUser(gctx)
+
+	vars := gonja.Context{"serverID": serverID}
+	if successMsg != "" {
+		vars["successMsg"] = successMsg
+	}
+
+	rules := []models.FirewallRule{}
+	var fetchErr error
+
+	server := models.GetServer(db, serverID, sessUser.TeamId)
+	if server.ID == 0 {
+		fetchErr = errors.New("Invalid server ID.")
+	} else if client, err := models.GetSSHClient(&server, false); err != nil {
+		fetchErr = err
+	} else if fetched, err := models.GetRules(client); err != nil {
+		fetchErr = err
+	} else {
+		rules = fetched
+	}
+
+	// The action's own failure is what the user needs to see; a follow up fetch
+	// error would otherwise mask it.
+	if actionErr != nil {
+		vars["errorMsg"] = actionErr.Error()
+	} else if fetchErr != nil {
+		vars["errorMsg"] = fetchErr.Error()
+	}
+
+	vars["rules"] = rules
+	vars["numRules"] = len(rules)
+
+	c.RenderWithoutLayout("servers/_firewall_rules", vars, gctx)
+}
+
 func (c *Controller) FirewallRulesAjax(gctx *gin.Context) {
 	id, err := strconv.ParseInt(gctx.Param("serverID"), 10, 64)
 	db := c.GetDB(gctx)
 	sessUser := c.GetSessionUser(gctx)
-	var server models.ServerWithSShKey
 
-	if !models.IsMyServer(db, id, sessUser.TeamId) {
+	if err != nil || !models.IsMyServer(db, id, sessUser.TeamId) {
 		gctx.Redirect(http.StatusFound, "/denied")
 		return
 	}
 
-	response := make(map[string]string)
-	if err != nil {
-		response["status"] = "failed"
-		response["msg"] = "Invalid server ID"
-		gctx.JSON(http.StatusBadRequest, response)
-		return
-	}
-
-	server = models.GetServer(db, id, sessUser.TeamId)
-	if server.ID == 0 {
-		response["status"] = "failed"
-		response["msg"] = "Invalid server ID"
-		gctx.JSON(http.StatusBadRequest, response)
-		return
-	}
-
-	client, err := models.GetSSHClient(&server, false)
-
-	if err != nil {
-		response["status"] = "failed"
-		response["msg"] = err.Error()
-		gctx.JSON(http.StatusBadRequest, response)
-		return
-	}
-
-	rules, err := models.GetRules(client)
-
-	if err != nil {
-		response["status"] = "failed"
-		response["msg"] = err.Error()
-		gctx.JSON(http.StatusBadRequest, response)
-		return
-	}
-
-	gctx.JSON(http.StatusOK, rules)
+	c.renderFirewallRules(gctx, id, "", nil)
 }
 
 func (c *Controller) DeleteFirewallRule(gctx *gin.Context) {
@@ -379,71 +400,41 @@ func (c *Controller) DeleteFirewallRule(gctx *gin.Context) {
 	ruleNumber, _ := strconv.ParseInt(gctx.PostForm("rule_number"), 10, 64)
 	sessUser := c.GetSessionUser(gctx)
 	rule := gctx.PostForm("rule")
-
 	db := c.GetDB(gctx)
 
 	if !models.IsMyServer(db, serverID, sessUser.TeamId) {
 		gctx.Redirect(http.StatusFound, "/denied")
 		return
 	}
-
-	response := make(map[string]string)
 
 	if serverID == 0 || ruleNumber == 0 {
-		response["status"] = "failed"
-		response["msg"] = "Bad server or rule ID."
-		gctx.JSON(http.StatusBadRequest, response)
+		c.renderFirewallRules(gctx, serverID, "", errors.New("Bad server or rule number."))
 		return
 	}
 
 	server := models.GetServer(db, serverID, sessUser.TeamId)
 	if server.ID == 0 {
-		response["status"] = "failed"
-		response["msg"] = "Bad server or rule ID."
-		gctx.JSON(http.StatusBadRequest, response)
+		c.renderFirewallRules(gctx, serverID, "", errors.New("Bad server or rule number."))
 		return
 	}
 
-	err := models.DeleteFirewallRule(db, &server, ruleNumber, rule)
-
-	if err != nil {
-		response["status"] = "failed"
-		response["msg"] = "Bad server or rule ID."
-		gctx.JSON(http.StatusBadRequest, response)
+	if err := models.DeleteFirewallRule(db, &server, ruleNumber, rule); err != nil {
+		c.renderFirewallRules(gctx, serverID, "", err)
 		return
 	}
 
-	response["status"] = "success"
-	response["msg"] = "Successfully deleted rule."
-	gctx.JSON(http.StatusOK, response)
+	c.renderFirewallRules(gctx, serverID, "Successfully deleted the rule.", nil)
 }
 
-func (c *Controller) AddFirewallRule(gctx *gin.Context) {
-	serverID, _ := strconv.ParseInt(gctx.PostForm("server_id"), 10, 64)
-	sessUser := c.GetSessionUser(gctx)
-	rule := gctx.PostForm("rule")
-	db := c.GetDB(gctx)
-
-	if !models.IsMyServer(db, serverID, sessUser.TeamId) {
-		gctx.Redirect(http.StatusFound, "/denied")
-		return
-	}
-
-	response := make(map[string]string)
-
-	if serverID == 0 || rule == "" {
-		response["status"] = "failed"
-		response["msg"] = "Bad server or firewall rule."
-		gctx.JSON(http.StatusBadRequest, response)
-		return
-	}
-
-	server := models.GetServer(db, serverID, sessUser.TeamId)
-	if server.ID == 0 {
-		response["status"] = "failed"
-		response["msg"] = "Bad server ID."
-		gctx.JSON(http.StatusBadRequest, response)
-		return
+// buildUfwRule composes a ufw rule from the form fields. The browser used to
+// assemble this string itself; doing it here keeps the shell command in one
+// place and lets the fields be validated.
+func buildUfwRule(allowBlock, direction, ip, port, protocol string) string {
+	var rule string
+	if direction == "outgoing" {
+		rule = fmt.Sprintf("%s out to %s port %s proto %s", allowBlock, ip, port, protocol)
+	} else {
+		rule = fmt.Sprintf("%s from %s to any port %s proto %s", allowBlock, ip, port, protocol)
 	}
 
 	rule = strings.ToLower(rule)
@@ -456,18 +447,42 @@ func (c *Controller) AddFirewallRule(gctx *gin.Context) {
 		rule = strings.ReplaceAll(rule, " proto udp", "/udp")
 	}
 
-	rule = strings.ReplaceAll(rule, "port any proto", "proto")
+	return strings.TrimSpace(strings.ReplaceAll(rule, "port any proto", "proto"))
+}
 
-	err := models.AddFirewallRule(db, &server, rule)
+func (c *Controller) AddFirewallRule(gctx *gin.Context) {
+	serverID, _ := strconv.ParseInt(gctx.PostForm("server_id"), 10, 64)
+	sessUser := c.GetSessionUser(gctx)
+	db := c.GetDB(gctx)
 
-	if err != nil {
-		response["status"] = "failed"
-		response["msg"] = "Failed to add firewall rule. Please try again."
-		gctx.JSON(http.StatusBadRequest, response)
+	if !models.IsMyServer(db, serverID, sessUser.TeamId) {
+		gctx.Redirect(http.StatusFound, "/denied")
 		return
 	}
 
-	response["status"] = "success"
-	response["msg"] = "Successfully added firewall rule."
-	gctx.JSON(http.StatusOK, response)
+	allowBlock := gctx.PostForm("allow_block")
+	direction := gctx.PostForm("direction")
+	ip := strings.TrimSpace(gctx.PostForm("ip"))
+	port := strings.TrimSpace(gctx.PostForm("port"))
+	protocol := gctx.PostForm("protocol")
+
+	if serverID == 0 || allowBlock == "" || direction == "" || ip == "" || port == "" || protocol == "" {
+		c.renderFirewallRules(gctx, serverID, "", errors.New("Please fill in every field before adding a rule."))
+		return
+	}
+
+	server := models.GetServer(db, serverID, sessUser.TeamId)
+	if server.ID == 0 {
+		c.renderFirewallRules(gctx, serverID, "", errors.New("Bad server ID."))
+		return
+	}
+
+	rule := buildUfwRule(allowBlock, direction, ip, port, protocol)
+
+	if err := models.AddFirewallRule(db, &server, rule); err != nil {
+		c.renderFirewallRules(gctx, serverID, "", fmt.Errorf("Failed to add rule %q: %s", rule, err))
+		return
+	}
+
+	c.renderFirewallRules(gctx, serverID, "Successfully added the rule.", nil)
 }

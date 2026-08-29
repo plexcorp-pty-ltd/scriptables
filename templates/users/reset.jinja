@@ -1,24 +1,24 @@
-
 <form action="/users/password/reset/{{token}}" method="post">
-<div class="input-group mb-3">
-<input type="email" class="form-control" name="email" placeholder="Email">
+  <input type="hidden" name="_csrf_token" value="{{_csrf_token}}" />
 
-</div>
-<div class="input-group mb-3">
-    <input type="password" class="form-control" name="password" placeholder="Password">
+  <div class="mb-3">
+    <label class="form-label">Email address</label>
+    <input type="email" name="email" class="form-control" placeholder="you@example.com" required />
+  </div>
 
-    </div>
-    <div class="input-group mb-3">
-        <input type="password" class="form-control" name="passwordAgain" placeholder="Password Again">
+  <div class="mb-3">
+    <label class="form-label">New password</label>
+    <input type="password" name="password" class="form-control" placeholder="New password"
+      autocomplete="new-password" required />
+  </div>
 
-        </div>
-<div class="row">
-<div class="col-12">
+  <div class="mb-3">
+    <label class="form-label">Confirm new password</label>
+    <input type="password" name="passwordAgain" class="form-control" placeholder="Repeat new password"
+      autocomplete="new-password" required />
+  </div>
 
-<input type="hidden" name="_csrf_token" value="{{_csrf_token}}" />
-
-<button type="submit" class="btn btn-primary btn-block">Change password</button>
-
-</div>
+  <div class="form-footer">
+    <button type="submit" class="btn btn-primary w-100">Change password</button>
+  </div>
 </form>
-

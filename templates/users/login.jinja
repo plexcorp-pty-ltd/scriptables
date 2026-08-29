@@ -1,23 +1,40 @@
+<form action="/users/authenticate" method="post" autocomplete="off" novalidate>
+  <input type="hidden" name="_csrf_token" value="{{_csrf_token}}" />
 
-<form action="/users/authenticate" method="post">
-<div class="input-group mb-3">
-<input type="email" class="form-control" name="email" placeholder="Email">
-<div class="input-group-append">
+  <div class="mb-3">
+    <label class="form-label">Email address</label>
+    <input type="email" name="email" class="form-control" placeholder="you@example.com" autocomplete="username" />
+  </div>
 
-</div>
-</div>
-<div class="input-group mb-3">
-<input type="password" class="form-control" name="password" placeholder="Password">
-<input type="hidden" name="_csrf_token" value="{{_csrf_token}}" />
+  <div class="mb-2">
+    <label class="form-label">
+      Password
+      <span class="form-label-description">
+        <a href="/users/password/forgot">Forgot password?</a>
+      </span>
+    </label>
+    <div class="input-group input-group-flat">
+      <input type="password" name="password" class="form-control" placeholder="Your password"
+        autocomplete="current-password" />
+      <span class="input-group-text">
+        <a href="#" class="link-secondary" title="Show password" data-password-toggle>
+          <i class="ti ti-eye"></i>
+        </a>
+      </span>
+    </div>
+  </div>
 
-</div>
-<div class="row">
-<div class="col-12">
-
-<button type="submit" class="btn btn-primary btn-block">Sign In</button>
-
-<br />
-</div>
-
-&nbsp;&nbsp;<a href="/users/password/forgot" class="">Forgot password?</a>
+  <div class="form-footer">
+    <button type="submit" class="btn btn-primary w-100">
+      <i class="ti ti-lock me-2"></i>Sign in
+    </button>
+  </div>
 </form>
+
+<script>
+  document.querySelector("[data-password-toggle]").addEventListener("click", function (e) {
+    e.preventDefault();
+    var field = document.querySelector("input[name=password]");
+    field.type = field.type === "password" ? "text" : "password";
+  });
+</script>

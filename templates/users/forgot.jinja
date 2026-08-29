@@ -1,14 +1,20 @@
+<p class="text-secondary mb-4">
+  Enter the email address on your account and we will send you a link to choose a new password.
+</p>
 
 <form action="/users/password/forgot" method="post">
-<div class="input-group mb-3">
-    <input type="email" class="form-control" name="email" placeholder="Email">
-    <input type="hidden" name="_csrf_token" value="{{_csrf_token}}" />
+  <input type="hidden" name="_csrf_token" value="{{_csrf_token}}" />
 
-</div>
-<div class="row">
-<div class="col-12">
+  <div class="mb-3">
+    <label class="form-label">Email address</label>
+    <input type="email" name="email" class="form-control" placeholder="you@example.com" required />
+  </div>
 
-<button type="submit" class="btn btn-primary btn-block">Send reset email</button>
-
-</div>
+  <div class="form-footer">
+    <button type="submit" class="btn btn-primary w-100">Send reset email</button>
+  </div>
 </form>
+
+<div class="text-center text-secondary mt-3">
+  <a href="/users/login">Back to sign in</a>
+</div>

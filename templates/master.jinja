@@ -2,251 +2,193 @@
 <html lang="en">
 
 <head>
-
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <meta name="_csrf_token" content="{{_csrf_token}}" />
 
-    <title>Scriptables - Easy server management</title>
+    <title>{% if title %}{{ title }} &middot; {% endif %}Scriptables</title>
 
-    <link rel="stylesheet" href="/static/js/fontawesome/css/all.min.css" />
+    <link rel="stylesheet" href="/static/tabler/css/tabler.min.css" />
+    <link rel="stylesheet" href="/static/tabler/css/tabler-vendors.min.css" />
+    <link rel="stylesheet" href="/static/tabler/css/tabler-icons.min.css" />
 
-    <!-- azia CSS -->
-    <link rel="stylesheet" href="/static/css/azia.css" />
-    <link rel="stylesheet" href="/static/js/sweetalert2/sweetalert2.min.css" />
-    <script src="/static/js/jquery/dist/jquery.min.js"></script>
-    <script src="/static/js/sweetalert2/sweetalert2.all.min.js"></script>
-    <style>
-      .highlight-nav {
-          color: #104ecf !important;
-          font-weight: bold !important;
-      }
-  </style>
-
+    <script>
+        // Applied before first paint so the page never flashes the wrong theme.
+        try {
+            var theme = localStorage.getItem("scriptables-theme") || "light";
+            document.documentElement.setAttribute("data-bs-theme", theme);
+        } catch (e) { }
+    </script>
 </head>
 
 <body>
+    <div class="page">
+        <header class="navbar navbar-expand-md d-print-none">
+            <div class="container-xl">
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#navbar-menu" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
 
-    <div class="az-header">
-        <div class="container">
-            <div class="az-header-left">
-                <a href="/"><img src="/static/img/logo.png" /></a>
-                <a href="" id="azMenuShow" class="az-header-menu-icon d-lg-none"><span></span></a>
-            </div><!-- az-header-left -->
-            <div class="az-header-menu">
-                <div class="az-header-menu-header">
-                    <a href="/"><img src="/static/img/logo.png" /></a>
-                    <a href="" class="close">&times;</a>
-                </div><!-- az-header-menu-header -->
-                <ul class="nav">
+                <a href="/" class="navbar-brand d-none-navbar-horizontal pe-0 pe-md-3">
+                    <!-- The logo is an opaque PNG, so it keeps a light plate in both themes. -->
+                    <span class="d-inline-block bg-white rounded px-2 py-1">
+                        <img src="/static/img/logo.png" alt="Scriptables" class="navbar-brand-image" height="28">
+                    </span>
+                </a>
 
-                    <li class="nav-item">
-                        <a href="/servers" class="nav-link{%if highlight == "servers" %} highlight-nav{% endif%}"><i
-                                class="fa fa-server"></i> &nbsp;Servers</a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="/sites" class="nav-link{%if highlight == "sites" %} highlight-nav{% endif%}"><i
-                                class="fa fa-globe"></i> &nbsp;Sites</a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="/crons" class="nav-link{%if highlight == "crons" %} highlight-nav{% endif%}"><i
-                                class="fa fa-robot"></i> &nbsp;Crons</a>
-                    </li>
-
-                    </li>
-                    <li class="nav-item">
-                        <a href="/sshkeys" class="nav-link{%if highlight == "sshkeys" %} highlight-nav{% endif%}"><i
-                                class="fa fa-key"></i> &nbsp; Ssh keys</a>
-                    </li>
-
-                    <li class="nav-item">
-                        <a href="/user/list" class="nav-link{%if highlight == "users" %} highlight-nav{% endif%}"><i
-                                class="fa fa-users"></i> &nbsp; Users</a>
-                    </li>
-                               <li class="nav-item">
-                        <a href="/guide" class="nav-link{%if highlight == "help" %} highlight-nav{% endif%}"><i
-                                class="fa fa-question"></i> &nbsp; Help</a>
-                    </li>
-                              <li class="nav-item">
-                        <a href="/users/logout" class="nav-link"><i class="fas fa-sign-out-alt"></i> &nbsp; Logout</a>
-                    </li>
-
-                </ul>
-            </div><!-- az-header-menu -->
-            <div class="az-header-right">
-
-
-                <div class="az-profile-menu">
-                    <a href="/user/profile" class="az-img-user"><img src="/static/icons/profile.png" alt=""></a>
-
+                <div class="navbar-nav flex-row order-md-last">
+                    <div class="nav-item d-none d-md-flex me-2">
+                        <a href="#" class="nav-link px-2" id="theme-toggle" title="Toggle dark mode"
+                            data-bs-toggle="tooltip">
+                            <i class="ti ti-moon icon"></i>
+                        </a>
+                    </div>
+                    <div class="nav-item dropdown">
+                        <a href="#" class="nav-link d-flex lh-1 p-0 px-2" data-bs-toggle="dropdown"
+                            aria-label="Open user menu">
+                            <span class="avatar avatar-sm"
+                                style="background-image: url(/static/icons/profile.png)"></span>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
+                            <a href="/user/profile" class="dropdown-item">
+                                <i class="ti ti-user me-2"></i>My profile
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <a href="/users/logout" class="dropdown-item">
+                                <i class="ti ti-logout me-2"></i>Logout
+                            </a>
+                        </div>
+                    </div>
                 </div>
-                
             </div>
-        </div><!-- az-header-right -->
-    </div><!-- container -->
-    </div><!-- az-header -->
+        </header>
 
-    <div class="az-content az-content-dashboard">
-        <div class="container">
-            <div class="az-content-body">
-                {% if errors is defined %}
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    <button type="button" class="close" data-dismiss="alert" data-bs-dismiss="alert" aria-label="Close">
-                        ×
-                    </button>
-                    <h5>
-                        <i class="icon fas fa-ban"></i> Oops! - please review the
-                        following errors and try again
-                    </h5>
-                    <ol>
-                        {% for e in errors %}
-                        <li>{{ e }}</li>
-                        {% endfor %}
-                    </ol>
+        <header class="navbar-expand-md">
+            <div class="collapse navbar-collapse" id="navbar-menu">
+                <div class="navbar">
+                    <div class="container-xl">
+                        <ul class="navbar-nav">
+                            <li class="nav-item{% if highlight == "servers" %} active{% endif %}">
+                                <a class="nav-link" href="/servers">
+                                    <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                        <i class="ti ti-server"></i>
+                                    </span>
+                                    <span class="nav-link-title">Servers</span>
+                                </a>
+                            </li>
+                            <li class="nav-item{% if highlight == "sites" %} active{% endif %}">
+                                <a class="nav-link" href="/sites">
+                                    <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                        <i class="ti ti-world"></i>
+                                    </span>
+                                    <span class="nav-link-title">Sites</span>
+                                </a>
+                            </li>
+                            <li class="nav-item{% if highlight == "crons" %} active{% endif %}">
+                                <a class="nav-link" href="/crons">
+                                    <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                        <i class="ti ti-robot"></i>
+                                    </span>
+                                    <span class="nav-link-title">Crons</span>
+                                </a>
+                            </li>
+                            <li class="nav-item{% if highlight == "users" %} active{% endif %}">
+                                <a class="nav-link" href="/user/list">
+                                    <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                        <i class="ti ti-users"></i>
+                                    </span>
+                                    <span class="nav-link-title">Users</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
-                {% endif %}
-                {%if successMsg is defined %}
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    <button type="button" class="close" data-bs-dismiss="alert" data-dismiss="alert" aria-label="Close">
-                        ×
-                    </button>
-                    <h5><i class="icon fas fa-check"></i> Success!</h5>
-                    {{ successMsg }}
+            </div>
+        </header>
+
+        <div class="page-wrapper">
+            <div class="page-body">
+                <div class="container-xl">
+                    {% if errors is defined %}
+                    <div class="alert alert-danger alert-dismissible" role="alert">
+                        <div class="d-flex">
+                            <div class="me-3">
+                                <i class="ti ti-ban icon alert-icon"></i>
+                            </div>
+                            <div>
+                                <h4 class="alert-title">Oops! Please review the following and try again</h4>
+                                <div class="text-secondary">
+                                    <ul class="mb-0 ps-3">
+                                        {% for e in errors %}
+                                        <li>{{ e }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <a class="btn-close" data-bs-dismiss="alert" aria-label="close"></a>
+                    </div>
+                    {% endif %}
+
+                    {% if successMsg is defined %}
+                    <div class="alert alert-success alert-dismissible" role="alert">
+                        <div class="d-flex">
+                            <div class="me-3">
+                                <i class="ti ti-circle-check icon alert-icon"></i>
+                            </div>
+                            <div>
+                                <h4 class="alert-title">Success!</h4>
+                                <div class="text-secondary">{{ successMsg }}</div>
+                            </div>
+                        </div>
+                        <a class="btn-close" data-bs-dismiss="alert" aria-label="close"></a>
+                    </div>
+                    {% endif %}
+
+                    {{ view }}
                 </div>
+            </div>
 
-                {% endif %}
-
-
-                {{ view }}
-            </div><!-- az-content-body -->
+            <footer class="footer footer-transparent d-print-none">
+                <div class="container-xl">
+                    <div class="row text-center align-items-center">
+                        <div class="col-12">
+                            <span class="text-secondary">
+                                &copy; {{ current_year }} Scriptables. All rights reserved.
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </footer>
         </div>
-    </div><!-- az-content -->
+    </div>
 
-
-    <script src="/static/js/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/static/js/fontawesome/js/all.min.js"> </script>
-
+    <!-- Tabler bundles the Bootstrap behaviour we use: dropdowns, collapse,
+         alert dismissal and tooltips. htmx drives everything dynamic. -->
+    <script src="/static/tabler/js/tabler.min.js"></script>
+    <script src="/static/htmx/htmx.min.js"></script>
     <script>
-        $(function() {
-            'use strict'
+        (function () {
+            var root = document.documentElement;
+            var toggle = document.getElementById("theme-toggle");
 
-            // This template is mobile first so active menu in navbar
-            // has submenu displayed by default but not in desktop
-            // so the code below will hide the active menu if it's in desktop
-            if (window.matchMedia('(min-width: 992px)').matches) {
-                $('.az-navbar .active').removeClass('show');
-                $('.az-header-menu .active').removeClass('show');
+            function paint() {
+                var dark = root.getAttribute("data-bs-theme") === "dark";
+                toggle.querySelector("i").className = dark ? "ti ti-sun icon" : "ti ti-moon icon";
             }
 
-            // Shows header dropdown while hiding others
-            $('.az-header .dropdown > a').on('click', function(e) {
+            paint();
+
+            toggle.addEventListener("click", function (e) {
                 e.preventDefault();
-                $(this).parent().toggleClass('show');
-                $(this).parent().siblings().removeClass('show');
+                var next = root.getAttribute("data-bs-theme") === "dark" ? "light" : "dark";
+                root.setAttribute("data-bs-theme", next);
+                try { localStorage.setItem("scriptables-theme", next); } catch (err) { }
+                paint();
             });
-
-            // Showing submenu in navbar while hiding previous open submenu
-            $('.az-navbar .with-sub').on('click', function(e) {
-                e.preventDefault();
-                $(this).parent().toggleClass('show');
-                $(this).parent().siblings().removeClass('show');
-            });
-
-            // this will hide dropdown menu from open in mobile
-            $('.dropdown-menu .az-header-arrow').on('click', function(e) {
-                e.preventDefault();
-                $(this).closest('.dropdown').removeClass('show');
-            });
-
-            // this will show navbar in left for mobile only
-            $('#azNavShow, #azNavbarShow').on('click', function(e) {
-                e.preventDefault();
-                $('body').addClass('az-navbar-show');
-            });
-
-            // this will hide currently open content of page
-            // only works for mobile
-            $('#azContentLeftShow').on('click touch', function(e) {
-                e.preventDefault();
-                $('body').addClass('az-content-left-show');
-            });
-
-            // This will hide left content from showing up in mobile only
-            $('#azContentLeftHide').on('click touch', function(e) {
-                e.preventDefault();
-                $('body').removeClass('az-content-left-show');
-            });
-
-            // this will hide content body from showing up in mobile only
-            $('#azContentBodyHide').on('click touch', function(e) {
-                e.preventDefault();
-                $('body').removeClass('az-content-body-show');
-            })
-
-            // navbar backdrop for mobile only
-            $('body').append('<div class="az-navbar-backdrop"></div>');
-            $('.az-navbar-backdrop').on('click touchstart', function() {
-                $('body').removeClass('az-navbar-show');
-            });
-
-            // Close dropdown menu of header menu
-            $(document).on('click touchstart', function(e) {
-                e.stopPropagation();
-
-                // closing of dropdown menu in header when clicking outside of it
-                var dropTarg = $(e.target).closest('.az-header .dropdown').length;
-                if (!dropTarg) {
-                    $('.az-header .dropdown').removeClass('show');
-                }
-
-                // closing nav sub menu of header when clicking outside of it
-                if (window.matchMedia('(min-width: 992px)').matches) {
-
-                    // Navbar
-                    var navTarg = $(e.target).closest('.az-navbar .nav-item').length;
-                    if (!navTarg) {
-                        $('.az-navbar .show').removeClass('show');
-                    }
-
-                    // Header Menu
-                    var menuTarg = $(e.target).closest('.az-header-menu .nav-item').length;
-                    if (!menuTarg) {
-                        $('.az-header-menu .show').removeClass('show');
-                    }
-
-                    if ($(e.target).hasClass('az-menu-sub-mega')) {
-                        $('.az-header-menu .show').removeClass('show');
-                    }
-
-                } else {
-
-                    //
-                    if (!$(e.target).closest('#azMenuShow').length) {
-                        var hm = $(e.target).closest('.az-header-menu').length;
-                        if (!hm) {
-                            $('body').removeClass('az-header-menu-show');
-                        }
-                    }
-                }
-
-            });
-
-            $('#azMenuShow').on('click', function(e) {
-                e.preventDefault();
-                $('body').toggleClass('az-header-menu-show');
-            })
-
-            $('.az-header-menu .with-sub').on('click', function(e) {
-                e.preventDefault();
-                $(this).parent().toggleClass('show');
-                $(this).parent().siblings().removeClass('show');
-            })
-
-            $('.az-header-menu-header .close').on('click', function(e) {
-                e.preventDefault();
-                $('body').removeClass('az-header-menu-show');
-            })
-
-        });
+        })();
     </script>
 </body>
 

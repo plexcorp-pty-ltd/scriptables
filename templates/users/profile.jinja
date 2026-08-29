@@ -1,49 +1,57 @@
-<div class="row">
-  <div class="col-md-12">
-    <div class="card">
-      <div class="card-body row">
-        <div class="col-md-12">
-            <form method="POST" action="/user/profile/update">
-          <div class="form-group">
-            <label for="inputName">Name</label>
-            <input type="text" id="name" name="name" value="{{user.Name}}" class="form-control" />
-          </div>
-          <div class="form-group">
-            <label for="inputEmail">E-Mail</label>
-            <input type="email" id="email" class="form-control" name="email" value="{{user.Email}}"/>
-          </div>
-          <div class="form-group">
-            <input type="checkbox" name="two_factor" id="two_factor" {% if user.TwoFactor == 1 %} checked {% endif %} onclick="handleCheckboxChange()"/> <label>Enable 2Factor Auth</label>
-            <div id="qrcode" style="display:none;">
-                <img src="/static/img/ajax.gif" id="loading-icon"/>
-                <br /> Please scan the above QR code with your Google authenticator app and hit "SAVE" below once done.
-            </div>
+<div class="page-header d-print-none mb-3">
+  <h2 class="page-title">My profile</h2>
+</div>
 
-          </div>
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <form class="card" method="POST" action="/user/profile/update">
+      <input type="hidden" name="_csrf_token" value="{{_csrf_token}}" />
 
-          <div class="form-group">
-            <input type="submit" class="btn btn-primary" value="SAVE" />
-          </div>
+      <div class="card-body">
+        <div class="mb-3">
+          <label class="form-label">Name</label>
+          <input type="text" id="name" name="name" value="{{user.Name}}" class="form-control" />
+        </div>
 
-          </form>
+        <div class="mb-3">
+          <label class="form-label">Email address</label>
+          <input type="email" id="email" name="email" value="{{user.Email}}" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+          <label class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" name="two_factor" id="two_factor" {% if user.TwoFactor == 1
+              %} checked {% endif %} onclick="handleCheckboxChange()" />
+            <span class="form-check-label">Enable two factor authentication</span>
+          </label>
+
+          <div id="qrcode" class="mt-3" style="display:none;">
+            <img src="/static/img/loader.gif" id="loading-icon" alt="QR code" class="img-fluid"
+              style="max-width:220px" />
+            <p class="text-secondary mt-2 mb-0">
+              Scan this QR code with your Google Authenticator app, then hit save below.
+            </p>
+          </div>
         </div>
       </div>
-    </div>
+
+      <div class="card-footer text-end">
+        <button type="submit" class="btn btn-primary">Save</button>
+      </div>
+    </form>
   </div>
 </div>
 
 <script>
-    function handleCheckboxChange() {
-  var checkbox = document.getElementById("two_factor");
-  var qrcodeDiv = document.getElementById("qrcode");
+  function handleCheckboxChange() {
+    var checkbox = document.getElementById("two_factor");
+    var qrcodeDiv = document.getElementById("qrcode");
 
-  if (checkbox.checked) {
-    qrcodeDiv.style.display = "block";
-    document.getElementById("loading-icon").src = "/user/2factor/qrcode";
-
-  } else {
-    qrcodeDiv.style.display = "none";
+    if (checkbox.checked) {
+      qrcodeDiv.style.display = "block";
+      document.getElementById("loading-icon").src = "/user/2factor/qrcode";
+    } else {
+      qrcodeDiv.style.display = "none";
+    }
   }
-
-}
 </script>

@@ -1,167 +1,117 @@
-  <style>
-      .cron-editor {
-          border: 1px solid #ccc;
-          padding: 10px;
-      }
-
-      .cron-bold {
-          font-weight: bold;
-          margin-bottom: 1.3rem;
-      }
-
-      .form-group {
-          display: flex;
-          align-items: center;
-      }
-
-      .form-group label {
-          margin-right: 10px;
-      }
-  </style>
-
-  <div class="row">
-     <div class="col-md-12 mb-2">
-<h2 class="az-dashboard-title">Add Cron job</h2>
+<div class="page-header d-print-none mb-3">
+  <div class="row g-2 align-items-center">
+    <div class="col">
+      <div class="page-pretitle">Crons</div>
+      <h2 class="page-title">{{title}}</h2>
+    </div>
   </div>
+</div>
 
-      <div class="col-md-12">
-          <div class="card card-info">
+<form method="post" action="{{action}}">
+  <input type="hidden" name="_csrf_token" value="{{_csrf_token}}" />
 
-              <form class="form-horizontal" method="post" action="{{action}}">
-                  <input type="hidden" name="csrftoken" value="{{ csrftoken }}" />
-                  <div class="card-body">
-
-                    <div class="form-group row">
-                      <label class="col-sm-2 col-form-label"
-                        >Server*</label
-                      >
-                      <div class="col-sm-10">
-                          <select class="form-control" required name="server_id">
-                              {% for server in servers %}
-                                  <option value="{{server.ID}}" {% if server._id == server_id %} selected {% endif %}>{{server.ServerName}}</option>
-                              {% endfor %}
-                          </select>
-                      </div>
-                    </div>
-                      <div class="form-group row">
-                          <label class="col-sm-2 col-form-label">Cron Name*</label>
-                          <div class="col-sm-10">
-                              <input class="form-control" required name="cron_name" value="{{ cron_name }}" />
-                          </div>
-                      </div>
-
-
-                      <div class="form-group row">
-                          <label class="col-sm-2 col-form-label">Cron user*</label>
-                          <div class="col-sm-10">
-                              <input type="text" class="form-control" required name="user"
-                                  value="{{ user }}" placeholder="The linux user to execute the cron as" />
-                          </div>
-                      </div>
-
-                      <div class="form-group row">
-                          <label class="col-sm-2 col-form-label">Cron command*</label>
-                          <div class="col-sm-10">
-                              <input type="text" required class="form-control" name="task"
-                                  value="{{ task }}"
-                                  placeholder="The job to run e.g. php /var/www/mysite/artisan cache:clear" />
-                          </div>
-                      </div>
-
-
-                      <div class="form-group row">
-                          <label class="col-sm-2 col-form-label">Cron Expression*</label>
-                          <div class="col-sm-10">
-
-                              <div class="cron-editor">
-                                <div class="row">
-                                  <pre>
-    .---------------- minute (0 - 59)
-    |  .------------- hour (0 - 23)
-    |  |  .---------- day of month (1 - 31)
-    |  |  |  .------- month (1 - 12) OR jan,feb,mar,apr ...
-    |  |  |  |  .---- day of week (0 - 6) (Sunday=0 or 7) OR sun,mon ...
-    |  |  |  |  |
-    *  *  *  *  *
-                                    </pre>
-                                </div>
-                                  <div class="form-group">
-                                      <div class="col-md-2">
-                                          <label for="minute">Minute:</label>
-                                      </div>
-                                      <div class="col-md-10">
-                                          <input type="text" id="minute" value="*"
-                                              class="form-control timeinput" placeholder="*">
-                                      </div>
-                                  </div>
-                                  <div class="form-group">
-                                      <div class="col-md-2">
-                                          <label for="hour">Hour:</label>
-                                      </div>
-                                      <div class="col-md-10">
-                                          <input type="text" id="hour" value="*"
-                                              class="form-control timeinput" placeholder="*">
-                                      </div>
-                                  </div>
-                                  <div class="form-group">
-                                      <div class="col-md-2">
-                                          <label for="day">Day of Month:</label>
-                                      </div>
-                                      <div class="col-md-10">
-                                          <input type="text" id="day" value="*"
-                                              class="form-control timeinput" placeholder="*">
-                                      </div>
-                                  </div>
-                                  <div class="form-group">
-                                      <div class="col-md-2">
-                                          <label for="month">Month:</label>
-                                      </div>
-                                      <div class="col-md-10">
-                                          <input type="text" id="month" value="*"
-                                              class="form-control timeinput" placeholder="*">
-                                      </div>
-                                  </div>
-                                  <div class="form-group">
-                                      <div class="col-md-2">
-                                          <label for="dayOfWeek">Day of Week:</label>
-                                      </div>
-                                      <div class="col-md-10">
-                                          <input type="text" id="dayOfWeek" value="*"
-                                              class="form-control timeinput" placeholder="*">
-                                      </div>
-                                  </div>
-                                  <div class="row">
-                                      <div class="col-md-12">
-                                          <i>Note: you can also manually enter the cron below and use constants such as
-                                              @hourly, @weekly etc...</i>
-
-                                          <input type="text" name="cron_expression" class="form-control cron-bold" id="cron-expression"
-                                              placeholder="*****" />
-                                      </div>
-                                      <div class="col-md-12">
-                                          <input type="text" readonly class="form-control cron-bold"
-                                              id="human-readable" style="color:orange" value="Every minute"
-                                              placeholder="Every minute" />
-                                      </div>
-
-                                  </div>
-                              </div>
-                              
-                          </div>
-        
-                      </div>
-     
-                  </div>
-
-                  <div class="card-footer">
-                      <button type="submit" class="btn btn-primary">SAVE</button>
-
-                  </div>
-              </form>
+  <div class="row row-cards">
+    <div class="col-lg-5">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Job</h3>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label required">Server</label>
+            <select class="form-select" required name="server_id">
+              {% for server in servers %}
+              <option value="{{server.ID}}" {% if server._id == server_id %}selected{% endif %}>
+                {{server.ServerName}}
+              </option>
+              {% endfor %}
+            </select>
           </div>
+
+          <div class="mb-3">
+            <label class="form-label required">Cron name</label>
+            <input class="form-control" required name="cron_name" value="{{ cron_name }}"
+              placeholder="Clear application cache" />
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label required">Cron user</label>
+            <input type="text" class="form-control" required name="user" value="{{ user }}"
+              placeholder="The Linux user to run the cron as" />
+          </div>
+
+          <div>
+            <label class="form-label required">Cron command</label>
+            <input type="text" required class="form-control font-monospace" name="task" value="{{ task }}"
+              placeholder="php /var/www/mysite/artisan cache:clear" />
+          </div>
+        </div>
       </div>
+    </div>
+
+    <div class="col-lg-7">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title"><i class="ti ti-clock me-2"></i>Schedule</h3>
+        </div>
+        <div class="card-body">
+          <pre class="mb-3"><code>.---------------- minute (0 - 59)
+|  .------------- hour (0 - 23)
+|  |  .---------- day of month (1 - 31)
+|  |  |  .------- month (1 - 12) OR jan,feb,mar,apr ...
+|  |  |  |  .---- day of week (0 - 6) (Sunday=0 or 7) OR sun,mon ...
+|  |  |  |  |
+*  *  *  *  *</code></pre>
+
+          <div class="row g-2 mb-3">
+            <div class="col">
+              <label for="minute" class="form-label">Minute</label>
+              <input type="text" id="minute" value="*" class="form-control timeinput text-center" placeholder="*">
+            </div>
+            <div class="col">
+              <label for="hour" class="form-label">Hour</label>
+              <input type="text" id="hour" value="*" class="form-control timeinput text-center" placeholder="*">
+            </div>
+            <div class="col">
+              <label for="day" class="form-label">Day of month</label>
+              <input type="text" id="day" value="*" class="form-control timeinput text-center" placeholder="*">
+            </div>
+            <div class="col">
+              <label for="month" class="form-label">Month</label>
+              <input type="text" id="month" value="*" class="form-control timeinput text-center" placeholder="*">
+            </div>
+            <div class="col">
+              <label for="dayOfWeek" class="form-label">Day of week</label>
+              <input type="text" id="dayOfWeek" value="*" class="form-control timeinput text-center" placeholder="*">
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Cron expression</label>
+            <input type="text" name="cron_expression" class="form-control font-monospace fw-bold"
+              id="cron-expression" placeholder="* * * * *" />
+            <small class="form-hint">
+              You can also type the expression directly, including constants such as
+              <code>@hourly</code> or <code>@weekly</code>.
+            </small>
+          </div>
+
+          <div>
+            <label class="form-label">In plain English</label>
+            <input type="text" readonly class="form-control" id="human-readable" value="Every minute"
+              placeholder="Every minute" />
+          </div>
+        </div>
+
+        <div class="card-footer text-end">
+          <button type="submit" class="btn btn-primary">Save cron</button>
+        </div>
+      </div>
+    </div>
   </div>
-  <script src="/static/js/cronstrue/cronstrue.min.js"></script>
+</form>
+
+<script src="/static/js/cronstrue/cronstrue.min.js"></script>
 
 
   <script>
@@ -181,12 +131,13 @@
                   throwExceptionOnParseError: true,
                   verbose: true
               });
-              humanReadableControl.style.border = "1px solid green";
-
+              humanReadableControl.classList.remove("is-invalid");
+              humanReadableControl.classList.add("is-valid");
               humanReadableControl.value = humanReadable;
           } catch (error) {
               humanReadableControl.value = "Invalid expression: " + cronExpression;
-              humanReadableControl.style.border = "1px solid red";
+              humanReadableControl.classList.remove("is-valid");
+              humanReadableControl.classList.add("is-invalid");
           }
 
       }

@@ -26,7 +26,6 @@ type Site struct {
 	DeployScriptables      string    `gorm:"column:deploy_scriptables;type:varchar(100)"`
 	SiteName               string    `gorm:"column:site_name"`
 	ServerID               int64     `gorm:"column:server_id"`
-	SSHKeyId               int64     `gorm:"column:ssh_key_id"`
 	Webroot                string    `gorm:"column:webroot;type:varchar(100)"`
 	PhpVersion             string    `gorm:"column:php_version;type:varchar(50)"`
 	LetsEncryptCertificate int       `gorm:"column:lets_encrypt_certificate;type:tinyint(3)"`
@@ -47,7 +46,6 @@ type SiteJoinServer struct {
 	Domain                 string
 	ScriptableName         string
 	ServerID               int64
-	SSHKeyId               int64
 	ServerName             string
 	DeployToken            string
 	Webroot                string
@@ -118,7 +116,7 @@ func GetSitesToDeploy(db *gorm.DB) []int64 {
 	return siteIds
 }
 
-func (site *Site) SubScriptableVars(db *gorm.DB, server *ServerWithSShKey, script string) string {
+func (site *Site) SubScriptableVars(db *gorm.DB, server *ServerDetails, script string) string {
 	username := utils.Slugify(site.SiteName)
 	script = strings.ReplaceAll(script, "#USERNAME#", server.NewSSHUsername)
 	script = strings.ReplaceAll(script, "#SITE_NAME#", site.SiteName)

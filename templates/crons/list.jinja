@@ -1,133 +1,122 @@
-
-    <div class="row">
-    <div class="col-md-12 mb-3">
-<h2 class="az-dashboard-title">Cron jobs        &nbsp;&nbsp; <a href="/cron/create" title="Add cron">
-<i class="fa fa-plus" style="color:#67707c;font-size:1.2rem"></i>
-        </a></h2>
-  </div>
-      <!-- Column for plus icon -->
-
-      <!-- Column for search form -->
-      <div class="col-md-12">
-        <form method="get" action="/crons" class="form-inline">
-          <div class="form-group">
-            <input type="text" placeholder="Search cron" value="{{search}}" class="form-control mr-2" />
-          </div>
-          <button type="submit" class="btn btn-primary">
-     <svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2023 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z"/></svg>
-          </button>
-        </form>
-      </div>
+<div class="page-header d-print-none mb-3">
+  <div class="row g-2 align-items-center">
+    <div class="col">
+      <h2 class="page-title">Cron jobs</h2>
+      <div class="text-secondary mt-1">{{numCrons}} cron job(s)</div>
     </div>
+    <div class="col-auto ms-auto d-print-none">
+      <a href="/cron/create" class="btn btn-primary">
+        <i class="ti ti-plus me-2"></i>Add cron
+      </a>
+    </div>
+  </div>
+</div>
 
-
-<div class="row">
 {% if numCrons == 0 %}
-<div class="col-md-12 bg-white" style="min-height:60vh;">
-<div style="display:flex;height:100%;align-items:center;align-items: center;justify-content: center;">
-<div>
-<svg xmlns="http://www.w3.org/2000/svg" height="200px" viewBox="0 0 576 512" fill="orange"><!--! Font Awesome Free 6.4.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2023 Fonticons, Inc. --><path d="M569.517 440.013C587.975 472.007 564.806 512 527.94 512H48.054c-36.937 0-59.999-40.055-41.577-71.987L246.423 23.985c18.467-32.009 64.72-31.951 83.154 0l239.94 416.028zM288 354c-25.405 0-46 20.595-46 46s20.595 46 46 46 46-20.595 46-46-20.595-46-46-46zm-43.673-165.346l7.418 136c.347 6.364 5.609 11.346 11.982 11.346h48.546c6.373 0 11.635-4.982 11.982-11.346l7.418-136c.375-6.874-5.098-12.654-11.982-12.654h-63.383c-6.884 0-12.356 5.78-11.981 12.654z"/></svg>
-<br /><br />
-<h4>Sorry, no crons found.</h4>
-<p>Click <a href="/cron/create">here</a> add cron.</p>
-</div>
-</div>
+<div class="card">
+  <div class="empty">
+    <div class="empty-icon">
+      <i class="ti ti-robot text-secondary" style="font-size:3rem"></i>
+    </div>
+    <p class="empty-title">No cron jobs found</p>
+    <p class="empty-subtitle text-secondary">
+      Schedule your first job on one of your servers.
+    </p>
+    <div class="empty-action">
+      <a href="/cron/create" class="btn btn-primary">
+        <i class="ti ti-plus me-2"></i>Add a cron
+      </a>
+    </div>
+  </div>
 </div>
 {% else %}
-<div class="col-md-12">
-            <div class="card card-dashboard-table-six py-4 px-4">
-              <h6 class="card-title az-content-title tx-24 mg-b-5 mg-b-lg-8">Cron List</h6>
-              <div class="table-responsive">
-                <table class="table table-borderd">
-   
-                    <tr>
-                      <th>Cron Name</th>
-                      <th>Server Name</th>
-                      <th>Status</th>
-                      <th>Cron User</th>
-                      <th>Cron Expression</th>
-                      <th>Updated at</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-     
-     
-                 {% for cron in crons %}
-                  <tr>
-                    <td>{{cron.CronName}}</td>
-            
-                    <td>{{cron.ServerName}}</td>
-                    <td>
-             {% if cron.Status == STATUS_QUEUED %}
-                    <img title="Build queued" src="/static/icons/queued.png"  style="max-width:38px" alt="Build queued." />
-                 {% endif %}
-
-                  {% if cron.Status == STATUS_CONNECTING %}
-                    <img title="Testing connection to server" src="/static/icons/sshtest.gif" style="max-width:38px" alt="Testing connection..." />
-                 {% endif %}
-
-                 {% if cron.Status == STATUS_COMPLETE %}
-                    <img title="Successfully built" src="/static/icons/online.png"  style="max-width:38px" alt="successfully built" />
-                 {% endif %}
-               
-                {% if cron.Status == STATUS_RUNNING %}
-                    <img title="Currently building server" src="/static/icons/running.gif"  style="max-width:38px" alt="building server..." />
-                 {% endif %}
-               
-                {% if cron.Status == STATUS_FAILED %}
-                    <img title="Build failed" src="/static/icons/failed.png"  style="max-width:38px" alt="Build failed" />
-                 {% endif %}
-
-                    </td>
-                    <td>{{cron.User}}</td>
-                    <td>{{cron.CronExpression}}</td>
-                    <td>{{cron.UpdatedAt}}</td>
-                    <td>
-                    <div style="display:flex;flex-direction:row; justify-content:space-evenly;">
-                    <div>
-                    <a href="/cron/edit/{{cron.ID}}">
-                    
-                    <svg xmlns="http://www.w3.org/2000/svg" height="1.2em" viewBox="0 0 512 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2023 Fonticons, Inc. --><path d="M410.3 231l11.3-11.3-33.9-33.9-62.1-62.1L291.7 89.8l-11.3 11.3-22.6 22.6L58.6 322.9c-10.4 10.4-18 23.3-22.2 37.4L1 480.7c-2.5 8.4-.2 17.5 6.1 23.7s15.3 8.5 23.7 6.1l120.3-35.4c14.1-4.2 27-11.8 37.4-22.2L387.7 253.7 410.3 231zM160 399.4l-9.1 22.7c-4 3.1-8.5 5.4-13.3 6.9L59.4 452l23-78.1c1.4-4.9 3.8-9.4 6.9-13.3l22.7-9.1v32c0 8.8 7.2 16 16 16h32zM362.7 18.7L348.3 33.2 325.7 55.8 314.3 67.1l33.9 33.9 62.1 62.1 33.9 33.9 11.3-11.3 22.6-22.6 14.5-14.5c25-25 25-65.5 0-90.5L453.3 18.7c-25-25-65.5-25-90.5 0zm-47.4 168l-144 144c-6.2 6.2-16.4 6.2-22.6 0s-6.2-16.4 0-22.6l144-144c6.2-6.2 16.4-6.2 22.6 0s6.2 16.4 0 22.6z"/></svg>
-                    </a>
-                    </div>
-
-                    {% if cron.Status == STATUS_COMPLETE %}
-                    <div>
-                      <form method="post" action="/cron/disable" id="form-{{cron.ID}}">
-                          <input type="hidden" name="id" value="{{cron.ID}}" />
-                          <a href="javascript:void(0)" onclick="document.getElementById('form-{{cron.ID}}').submit();">
-                          <svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2023 Fonticons, Inc. --><path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM175 175c9.4-9.4 24.6-9.4 33.9 0l47 47 47-47c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9l-47 47 47 47c9.4 9.4 9.4 24.6 0 33.9s-24.6 9.4-33.9 0l-47-47-47 47c-9.4 9.4-24.6 9.4-33.9 0s-9.4-24.6 0-33.9l47-47-47-47c-9.4-9.4-9.4-24.6 0-33.9z"/></svg>
-                          </a>
-
-                      </form>
-                      </div>
-                    {% endif %}
-                    {% if cron.Status == STATUS_FAILED %}
-                        <form method="post" action="/cron/retrybuild" style="display:inline;padding-left:5px;">
-
-                          <button onclick="this.form.submit();" style="background:transparent;border:transparent">
-                          <input type="hidden" name="retryBuildId" value="{{cron.ID}}" />
-                          <img src="/static/icons/rebuild.png" alt="Retry deploying cron"  style="max-height:28px" title="Retry deploying cron" />
-                          </button>
-                      </form>
-                    {% endif %}
-                     <a href="/logs/cron/{{cron.ID}}"><img src="/static/icons/log.png" 
-                     alt="View Log" title="View Log" style="max-height:28px;" /></a>
-
-
-                    </div>
-                    
-                    </td>
-                  </tr>
-                 {% endfor %}
-
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-{% endif %}
-
+<div class="card">
+  <div class="card-body border-bottom py-3">
+    <form method="get" action="/crons">
+      <div class="input-group" style="max-width:380px">
+        <input type="text" name="search" placeholder="Search crons&hellip;" value="{{search}}" class="form-control" />
+        <button type="submit" class="btn">
+          <i class="ti ti-search"></i>
+        </button>
+      </div>
+    </form>
   </div>
+
+  <div class="table-responsive">
+    <table class="table table-vcenter card-table">
+      <thead>
+        <tr>
+          <th>Cron name</th>
+          <th>Server</th>
+          <th>Status</th>
+          <th>User</th>
+          <th>Expression</th>
+          <th>Updated</th>
+          <th class="w-1">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for cron in crons %}
+        <tr>
+          <td>{{cron.CronName}}</td>
+          <td class="text-secondary">{{cron.ServerName}}</td>
+          <td>
+            {% if cron.Status == STATUS_QUEUED %}
+            <span class="badge bg-secondary-lt">Queued</span>
+            {% endif %}
+            {% if cron.Status == STATUS_CONNECTING %}
+            <span class="badge bg-azure-lt">Connecting</span>
+            {% endif %}
+            {% if cron.Status == STATUS_COMPLETE %}
+            <span class="badge bg-success-lt">Active</span>
+            {% endif %}
+            {% if cron.Status == STATUS_RUNNING %}
+            <span class="badge bg-blue-lt">Building</span>
+            {% endif %}
+            {% if cron.Status == STATUS_FAILED %}
+            <span class="badge bg-danger-lt">Failed</span>
+            {% endif %}
+          </td>
+          <td class="text-secondary">{{cron.User}}</td>
+          <td class="text-secondary font-monospace">{{cron.CronExpression}}</td>
+          <td class="text-secondary">{{cron.UpdatedAt}}</td>
+          <td>
+            <div class="btn-list flex-nowrap">
+              <a href="/cron/edit/{{cron.ID}}" class="btn btn-icon btn-sm" title="Edit cron" data-bs-toggle="tooltip">
+                <i class="ti ti-edit"></i>
+              </a>
+
+              <a href="/logs/cron/{{cron.ID}}" class="btn btn-icon btn-sm" title="View log" data-bs-toggle="tooltip">
+                <i class="ti ti-terminal-2"></i>
+              </a>
+
+              {% if cron.Status == STATUS_COMPLETE %}
+              <form method="post" action="/cron/disable" id="form-{{cron.ID}}">
+                <input type="hidden" name="_csrf_token" value="{{_csrf_token}}" />
+                <input type="hidden" name="id" value="{{cron.ID}}" />
+                <button type="submit" class="btn btn-icon btn-sm btn-ghost-danger" title="Disable cron"
+                  data-bs-toggle="tooltip">
+                  <i class="ti ti-ban"></i>
+                </button>
+              </form>
+              {% endif %}
+
+              {% if cron.Status == STATUS_FAILED %}
+              <form method="post" action="/cron/retrybuild">
+                <input type="hidden" name="_csrf_token" value="{{_csrf_token}}" />
+                <input type="hidden" name="retryBuildId" value="{{cron.ID}}" />
+                <button type="submit" class="btn btn-icon btn-sm" title="Retry deploying cron"
+                  data-bs-toggle="tooltip">
+                  <i class="ti ti-reload"></i>
+                </button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}

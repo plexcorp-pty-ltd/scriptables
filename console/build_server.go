@@ -17,7 +17,7 @@ import (
 	"plexcorp.tech/scriptable/utils"
 )
 
-func runServerBuild(db *gorm.DB, server *models.ServerWithSShKey, scriptables []string, wg *sync.WaitGroup) error {
+func runServerBuild(db *gorm.DB, server *models.ServerDetails, scriptables []string, wg *sync.WaitGroup) error {
 	db.Model(&models.Server{}).Where("id", server.ID).Update("status", models.STATUS_RUNNING)
 
 	defer func() {
@@ -28,13 +28,6 @@ func runServerBuild(db *gorm.DB, server *models.ServerWithSShKey, scriptables []
 		}
 
 	}()
-
-	pk := utils.Decrypt(server.PrivateKey)
-	pass := ""
-
-	if server.Passphrase != "" {
-		pass = utils.Decrypt(server.Passphrase)
-	}
 
 	var securityStepComplete int64
 	db.Table("scriptable_task_logs").Where("entity='server' AND entity_id=? and task like '%post_steps%' and task_status=?",
@@ -48,7 +41,7 @@ func runServerBuild(db *gorm.DB, server *models.ServerWithSShKey, scriptables []
 		username = server.NewSSHUsername
 	}
 
-	client, err := sshclient.DialWithKey(server.ServerIP+":"+strconv.Itoa(port), username, pk, pass)
+	client, err := sshclient.DialWithLocalKeys(server.ServerIP+":"+strconv.Itoa(port), username)
 	if err != nil {
 		models.LogError(db, server.ID, "server", "Cannot SSH into server: "+server.ServerName+" - "+server.ServerIP,
 			"SSH connection failed:"+err.Error(), server.TeamId)

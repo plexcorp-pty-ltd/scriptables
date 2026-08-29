@@ -25,6 +25,9 @@ services:
     build:
       context: .
       dockerfile: ./Dockerfile
+    volumes:
+      # Scriptables authenticates with the SSH keys on the host. Mounted read only.
+      - ${HOME}/.ssh:/home/docker/.ssh:ro
     ports:
       - "${SCRIPTABLES_SERVER_DSN_HOST}:${SCRIPTABLES_SERVER_DSN_PORT}:${SCRIPTABLES_SERVER_DSN_PORT}"
     depends_on:

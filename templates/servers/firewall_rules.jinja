@@ -1,232 +1,91 @@
-<div class="row">
-    <div class="col-md-12" style="text-align:center" id="app">
-        <h4>Firewall rules for: {{ serverName }}</h4>
+<div class="page-header d-print-none mb-3">
+  <div class="row g-2 align-items-center">
+    <div class="col">
+      <div class="page-pretitle">Servers</div>
+      <h2 class="page-title">Firewall rules for {{ serverName }}</h2>
+    </div>
+  </div>
+</div>
 
-        <img v-if="loading" src="/static/img/loader.gif" alt="Fetching rules..." />
+<div class="card mb-3">
+  <div class="card-header">
+    <h3 class="card-title">Add a rule</h3>
+  </div>
 
-        <table class="table table-bordered mg-b-0" v-if="rules.length > 0">
-            <thead>
-                <tr>
-                    <th style="text-align:left">Rule</th>
-                    <th>#</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td colspan="2">
-                        <div class="form-group">
-                            <form @submit="saveForm">
-                                <div style="display:flex;flex-direction:row;">
-                                    <div class="px-2">
-                                        <select class="form-control" required v-model="allowBlock">
-                                            <option value="">Allow/Deny Access</option>
-                                            <option value="allow">Allow</option>
-                                            <option value="deny">Deny</option>
-                                        </select>
-                                    </div>
-                                    <div class="px-2">
-                                        <select class="form-control" required v-model="protocol">
-                                            <option value="">TCP/UDP</option>
-                                            <option value="tcp">TCP</option>
-                                            <option value="udp">UDP</option>
-                                        </select>
-                                    </div>
-                                    <div class="px-2" style="flex: 2">
-                                        <input v-model="ip" type="text" class="form-control" required
-                                            placeholder="IP e.g. 192.168.1.1 or Anywhere">
-                                    </div>
+  {# Posting the individual fields lets the server compose the ufw command. #}
+  <form hx-post="/server/firewall/add/rule" hx-target="#firewall-rules" hx-swap="innerHTML"
+    hx-indicator="#firewall-loading" hx-disabled-elt="find button[type=submit]">
+    <input type="hidden" name="_csrf_token" value="{{ _csrf_token }}" />
+    <input type="hidden" name="server_id" value="{{ serverID }}" />
 
-                                    <div class="px-2">
-                                        <select class="form-control" required v-model="inout">
-                                            <option value="">Rule applies to/from server</option>
-                                            <option value="outgoing">Out from server</option>
-                                            <option value="incoming">Into to server</option>
-                                        </select>
-                                    </div>
-
-                                    <div class="px-2">
-                                        <input type="text" v-model="port" class="form-control"
-                                            placeholder="Port e.g. 9022 or any" required>
-                                    </div>
-
-                                    <div class="px-2">
-                                        <input type="submit" value="ADD RULE" :disabled="loading" class="btn btn-success" />
-                                    </div>
-
-                                </div>
-                            </form>
-                        </div>
-                    </td>
-                </tr>
-                <tr v-for="(rule, index) in rules" :key="index">
-                    <td v-html="rule" style="text-align:left"></td>
-                    <td><a href="javascript:void(0)" @click="deleteRule(index)"><svg xmlns="http://www.w3.org/2000/svg"
-                                height="1em"
-                                viewBox="0 0 448 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2023 Fonticons, Inc. -->
-                                <path
-                                    d="M32 464a48 48 0 0 0 48 48h288a48 48 0 0 0 48-48V128H32zm272-256a16 16 0 0 1 32 0v224a16 16 0 0 1-32 0zm-96 0a16 16 0 0 1 32 0v224a16 16 0 0 1-32 0zm-96 0a16 16 0 0 1 32 0v224a16 16 0 0 1-32 0zM432 32H312l-9.4-18.7A24 24 0 0 0 281.1 0H166.8a23.72 23.72 0 0 0-21.4 13.3L136 32H16A16 16 0 0 0 0 48v32a16 16 0 0 0 16 16h416a16 16 0 0 0 16-16V48a16 16 0 0 0-16-16z" />
-                            </svg><a></td>
-                </tr>
-            </tbody>
-        </table>
-
+    <div class="card-body">
+      <div class="row g-2">
+        <div class="col-md-2">
+          <label class="form-label">Action</label>
+          <select class="form-select" required name="allow_block">
+            <option value="">Choose&hellip;</option>
+            <option value="allow">Allow</option>
+            <option value="deny">Deny</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Protocol</label>
+          <select class="form-select" required name="protocol">
+            <option value="">Choose&hellip;</option>
+            <option value="tcp">TCP</option>
+            <option value="udp">UDP</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">IP address</label>
+          <input name="ip" type="text" class="form-control" required placeholder="192.168.1.1 or Anywhere">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Direction</label>
+          <select class="form-select" required name="direction">
+            <option value="">Choose&hellip;</option>
+            <option value="outgoing">Out from server</option>
+            <option value="incoming">In to server</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Port</label>
+          <input type="text" name="port" class="form-control" placeholder="9022 or any" required>
+        </div>
+      </div>
     </div>
 
+    <div class="card-footer text-end">
+      <button type="submit" class="btn btn-primary">
+        <i class="ti ti-plus me-2"></i>Add rule
+      </button>
+    </div>
+  </form>
 </div>
 
+<div class="card">
+  <div class="card-header d-flex align-items-center">
+    <h3 class="card-title">Active rules</h3>
+    <div class="ms-auto">
+      <button class="btn btn-sm" hx-get="/server/firewall-ajax/{{ serverID }}" hx-target="#firewall-rules"
+        hx-swap="innerHTML" hx-indicator="#firewall-loading">
+        <i class="ti ti-refresh me-1"></i>Refresh
+      </button>
+    </div>
+  </div>
+
+  {# htmx toggles .htmx-request on this element for the duration of any request. #}
+  <div id="firewall-loading" class="htmx-indicator">
+    <div class="progress progress-sm mb-0">
+      <div class="progress-bar progress-bar-indeterminate"></div>
+    </div>
+  </div>
+
+  {# Loads once on page load, then re-rendered by every add/delete. #}
+  <div id="firewall-rules" hx-get="/server/firewall-ajax/{{ serverID }}" hx-trigger="load"
+    hx-indicator="#firewall-loading">
+    <div class="card-body text-secondary text-center">
+      Fetching rules from the server&hellip;
+    </div>
+  </div>
 </div>
-
-<script src="/static/js/vue2/vue.min.js"></script>
-<script>
-    var app = new Vue({
-        el: '#app',
-        data() {
-            return {
-                loading: true,
-                rules: [],
-                allowBlock: "",
-                ip: "",
-                inout: "",
-                port: "",
-                protocol: "",
-            };
-        },
-        methods: {
-            doDeleteRule(ruleNumber, rule) {
-                this.loading = true;
-                let fd = new FormData();
-                fd.append('server_id', '{{ serverID }}')
-                fd.append("rule_number", ruleNumber);
-                fd.append("rule", rule)
-
-                fetch('/server/firewall/delete/rule', {
-                        body: fd,
-                        method: "post"
-                    }).then(response => response.json())
-                    .then(response => {
-                        Swal.fire({
-                            title: 'Success!',
-                            text: 'Successfully deleted rule. Will pull fresh firewall rules list shortly...',
-                            icon: 'success',
-                            confirmButtonText: 'OK',
-                        }).then(() => {
-                            this.loading = false;
-                            window.location.reload();
-                        })
-                    })
-                    .catch(error => {
-                        this.loading = false;
-                        Swal.fire({
-                            title: 'Error!',
-                            text: 'Sorry, something went wrong. Please try again.',
-                            icon: 'error',
-                            confirmButtonText: 'OK'
-                        });
-                    });
-            },
-            deleteRule(index) {
-                let ruleNumber = parseInt(this.rules[index].split("]")[0].replace("[", "").replace(" ", ""));
-                Swal.fire({
-                    title: 'Are you sure?',
-                    text: "Are you sure you want to delete: " + this.rules[index],
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#3085d6',
-                    cancelButtonColor: '#d33',
-                    confirmButtonText: 'Yes, delete it!'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        this.doDeleteRule(ruleNumber, this.rules[index]);
-                    } else {
-                        Swal.fire({
-                            position: 'top-end',
-                            icon: 'error',
-                            title: 'Cancelled deletion.',
-                            showConfirmButton: false,
-                            timer: 1500
-                        })
-                    }
-                })
-            },
-
-            saveForm(event) {
-                event.preventDefault();
-                if (this.allowBlock == "" || this.inout == "" || this.ip == "" || this.port == "" || this.protocol == "") {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Oops! some fields are missing.',
-                        text: "Please fill in all fields.",
-                        confirmButtonText: 'OK'
-                    });
-                    return false;
-                }
-
-                fd = new FormData();
-                
-                let cmd = "";
-                if (this.inout == "outgoing") {
-                    cmd = this.allowBlock+" out to "+this.ip+" port " + this.port + " proto " + this.protocol;
-                } else {
-                    cmd = this.allowBlock+" from "+this.ip+" to any port " + this.port + " proto " + this.protocol;
-                }
-
-                fd.append("server_id", "{{serverID}}");
-                fd.append("rule", cmd);
-                this.loading = true;
-                fetch('/server/firewall/add/rule', {
-                        body: fd,
-                        method: "post"
-                    }).then(response => response.json())
-                    .then(response => {
-                        this.loading = false;
-                        if (response.status == "failed") {
-                            Swal.fire({
-                            title: 'Error!',
-                            text: response.msg,
-                            icon: 'error',
-                            confirmButtonText: 'OK'
-                        });
-                        } else {
-                            Swal.fire({
-                                title: 'Success!',
-                                text: 'Successfully added rule. Will pull fresh firewall rules list shortly...',
-                                icon: 'success',
-                                confirmButtonText: 'OK',
-                            }).then(() => {
-                                this.loading = false;
-                                window.location.reload();
-                            })
-                        }
-
-                    })
-                    .catch(error => {
-                        this.loading = false;
-                        Swal.fire({
-                            title: 'Error!',
-                            text: 'Sorry, something went wrong. Please try again.',
-                            icon: 'error',
-                            confirmButtonText: 'OK'
-                        });
-                    });
-            }
-        },
-        created() {
-            fetch('/server/firewall-ajax/{{ serverID }}')
-                .then(response => response.json())
-                .then(response => {
-                    this.rules = response;
-                    this.loading = false;
-                })
-                .catch(error => {
-                    Swal.fire({
-                        title: 'Error!',
-                        text: 'Sorry, something went wrong. Trying again...',
-                        icon: 'error',
-                        confirmButtonText: 'OK',
-                    }).then(() => {
-                        window.location.reload();
-                    });
-                });
-        },
-    });
-</script>

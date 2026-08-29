@@ -19,7 +19,7 @@ func getScriptables(site *models.Site) []string {
 	return utils.GetScriptables(site.ScriptableName)
 }
 
-func RunSiteBuild(db *gorm.DB, site *models.Site, server *models.ServerWithSShKey, scriptables []string,
+func RunSiteBuild(db *gorm.DB, site *models.Site, server *models.ServerDetails, scriptables []string,
 	logSteps bool, wg *sync.WaitGroup) error {
 	db.Model(&models.Site{}).Where("id", site.ID).Update("status", models.STATUS_RUNNING)
 

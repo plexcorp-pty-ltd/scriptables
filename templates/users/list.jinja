@@ -1,105 +1,94 @@
-<div class="row">
-<div class="col-md-12">
-<h2 class="az-dashboard-title">User Management &nbsp;&nbsp; <a href="/user/create"><i class="fa fa-plus" style="color:#67707c;font-size:1.2rem"></i></a></h2>
-  </div>
-
-  <div class="col-md-12">
-    <div class="card">
-      <div class="card-body">
-            <div style="max-width:350px;padding-bottom:10px;vertical-align:top;">
-                <form action="/user/list?page={{page}}" method="GET">
-                    <div class="input-group">
-                      <input
-                        name="search"
-                        type="search"
-                        value="{{search}}"
-                        class="form-control"
-                        placeholder="Type your keywords here"
-                      />
-                      <div class="input-group-append">
-                        <button type="submit" class="btn btn-lg btn-default">
-                          <i class="fa fa-search"></i>
-                        </button>
-                      </div>
-                    </div>
-                  </form>  
- 
-            </div>
-
-        <table class="table table-bordered">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Active</th>
-              <th>Created on</th>
-              <th>#</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for user in users %}
-            <tr>
-              <td>{{user.ID}}</td>
-              <td>{{user.Name}}</td>
-              <td>{{user.Email}}</td>
-              <td>{% if user.Verified == 1 %} Yes {% else %} No {% endif %}</td>
-              <td>{{user.CreatedAt}}</td>
-          
-              <td>
-                <form method="post" action="/user/actions">
-                    <input type="hidden" name="action" value="{% if user.Verified == 1 %}deactivate{% else %}activate{% endif %}" />
-                    <input type="hidden" name="user_id" value="{{user.ID}}" />
-                    {% if user.Verified == 1 %}
-                    <input type="submit" value="Disable Login" class="btn btn-danger btn-sm"/>
-                    {% else %}
-                    <input type="submit" value="Enable Login" class="btn btn-success btn-sm"/>
-
-                    {% endif %}
-                </form>
-
-                <form method="post" action="/user/actions" style="margin-top:5px;">
-                    <input type="hidden" name="action" value="sendpassword" />
-                    <input type="hidden" name="user_id" value="{{user.ID}}" />
-                    <input type="hidden" name="user_email" value="{{user.Email}}" />
-                    <input type="hidden" name="_csrf_token" value="{{_csrf_token}}" />
-    
-                    <input type="submit" value="Password reset" class="btn btn-info btn-sm"/>
-
-
-                </form>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-
-      <div class="card-footer clearfix">
-        <ul class="pagination pagination-sm m-0 float-right">
-          {% if prevPage > 0 %}
-          <li class="page-item">
-            <a
-              class="page-link"
-              href="/user/list?page={{prevPage}}{{searchQuery}}"
-              ><< Prev</a
-            >
-          </li>
-          {% endif %}
-
-          <li class="page-item">
-            <a
-              class="page-link"
-              href="/user/list?page={{nextPage}}{{searchQuery}}"
-              >Next >></a
-            >
-          </li>
-        </ul>
-      </div>
+<div class="page-header d-print-none mb-3">
+  <div class="row g-2 align-items-center">
+    <div class="col">
+      <h2 class="page-title">User management</h2>
+      <div class="text-secondary mt-1">{{ users|length }} user(s) in your team</div>
+    </div>
+    <div class="col-auto ms-auto d-print-none">
+      <a href="/user/create" class="btn btn-primary">
+        <i class="ti ti-plus me-2"></i>Invite user
+      </a>
     </div>
   </div>
 </div>
 
+<div class="card">
+  <div class="card-body border-bottom py-3">
+    <form action="/user/list?page={{page}}" method="GET">
+      <div class="input-group" style="max-width:380px">
+        <input name="search" type="search" value="{{search}}" class="form-control" placeholder="Search users&hellip;" />
+        <button type="submit" class="btn">
+          <i class="ti ti-search"></i>
+        </button>
+      </div>
+    </form>
+  </div>
 
+  <div class="table-responsive">
+    <table class="table table-vcenter card-table">
+      <thead>
+        <tr>
+          <th class="w-1">ID</th>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Login</th>
+          <th>Created</th>
+          <th class="w-1"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user in users %}
+        <tr>
+          <td class="text-secondary">{{user.ID}}</td>
+          <td>{{user.Name}}</td>
+          <td class="text-secondary">{{user.Email}}</td>
+          <td>
+            {% if user.Verified == 1 %}
+            <span class="badge bg-success-lt">Enabled</span>
+            {% else %}
+            <span class="badge bg-secondary-lt">Disabled</span>
+            {% endif %}
+          </td>
+          <td class="text-secondary">{{user.CreatedAt}}</td>
+          <td>
+            <div class="btn-list flex-nowrap">
+              <form method="post" action="/user/actions">
+                <input type="hidden" name="_csrf_token" value="{{_csrf_token}}" />
+                <input type="hidden" name="action"
+                  value="{% if user.Verified == 1 %}deactivate{% else %}activate{% endif %}" />
+                <input type="hidden" name="user_id" value="{{user.ID}}" />
+                {% if user.Verified == 1 %}
+                <button type="submit" class="btn btn-sm btn-outline-danger">Disable login</button>
+                {% else %}
+                <button type="submit" class="btn btn-sm btn-outline-success">Enable login</button>
+                {% endif %}
+              </form>
 
+              <form method="post" action="/user/actions">
+                <input type="hidden" name="action" value="sendpassword" />
+                <input type="hidden" name="user_id" value="{{user.ID}}" />
+                <input type="hidden" name="user_email" value="{{user.Email}}" />
+                <input type="hidden" name="_csrf_token" value="{{_csrf_token}}" />
+                <button type="submit" class="btn btn-sm">Password reset</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card-footer d-flex align-items-center">
+    <ul class="pagination m-0 ms-auto">
+      {% if prevPage > 0 %}
+      <li class="page-item">
+        <a class="page-link" href="/user/list?page={{prevPage}}{{searchQuery}}">Prev</a>
+      </li>
+      {% endif %}
+      <li class="page-item">
+        <a class="page-link" href="/user/list?page={{nextPage}}{{searchQuery}}">Next</a>
+      </li>
+    </ul>
+  </div>
 </div>

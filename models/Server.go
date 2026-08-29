@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"plexcorp.tech/scriptable/sshclient"
 	"plexcorp.tech/scriptable/utils"
 )
 
@@ -17,7 +18,6 @@ type Server struct {
 	ServerType        string    `gorm:"column:server_type;type:varchar(50)"`
 	ServerIP          string    `gorm:"column:server_ip;type:varchar(100)"`
 	PrivateServerIP   string    `gorm:"column:private_server_ip;type:varchar(100)"`
-	SSHKeyId          int64     `gorm:"column:ssh_key_id"`
 	SSHUsername       string    `gorm:"column:ssh_username;type:varchar(100)"`
 	NewSSHUsername    string    `gorm:"column:new_ssh_username;type:varchar(100)"`
 	SshPort           int       `gorm:"column:ssh_port"`
@@ -43,7 +43,7 @@ type ServerType struct {
 	Description string
 }
 
-type ServerWithSShKey struct {
+type ServerDetails struct {
 	ID                int64
 	ServerName        string
 	ServerType        string
@@ -62,11 +62,16 @@ type ServerWithSShKey struct {
 	WebserverType     string
 	ScriptableName    string
 	Status            string
-	PrivateKey        string
-	PublicKey         string
-	Passphrase        string
 	AptPackages       string
 	TeamId            int64
+}
+
+// SERVER_TYPE_EXISTING connects to a server that is already set up. No
+// scriptables are run against it, so nothing is installed or reconfigured.
+const SERVER_TYPE_EXISTING = "existing"
+
+func IsExistingServer(serverType string) bool {
+	return serverType == SERVER_TYPE_EXISTING
 }
 
 func GetServerTypes() []ServerType {
@@ -80,6 +85,7 @@ func GetServerTypes() []ServerType {
 		//{Slug: "php", Name: "PHP application server", Description: "PHP server with php-fpm and other standard php libraries."},
 		{Slug: "cache", Name: "Standalone cache server", Description: "Redis or memcache to store sessions and cache data."},
 		{Slug: "scriptable", Name: "Scriptable server", Description: "Deploy scriptable to a cloud server."},
+		{Slug: SERVER_TYPE_EXISTING, Name: "Connect existing server", Description: "Connect a server you have already set up. Nothing is installed or changed, we only verify the SSH connection."},
 	}
 
 }
@@ -110,8 +116,12 @@ func ValidateForm(gctx *gin.Context, s *Server) []string {
 	s.ServerName = gctx.PostForm("server_name")
 	s.ServerIP = gctx.PostForm("server_ip")
 	s.PrivateServerIP = gctx.PostForm("private_server_ip")
+
+	if IsExistingServer(s.ServerType) {
+		return validateExistingServerForm(gctx, s)
+	}
+
 	s.PhpVersion = gctx.PostForm("php_version")
-	s.SSHKeyId, _ = strconv.ParseInt(gctx.PostForm("ssh_key_id"), 10, 64)
 
 	s.Certbot = 0
 	s.Redis = 0
@@ -127,10 +137,6 @@ func ValidateForm(gctx *gin.Context, s *Server) []string {
 
 	if gctx.PostForm("memcache") == "on" {
 		s.Memcache = 1
-	}
-
-	if s.SSHKeyId == 0 {
-		errors = append(errors, "Please select an SSH key.")
 	}
 
 	s.MySql = 0
@@ -186,7 +192,52 @@ func ValidateForm(gctx *gin.Context, s *Server) []string {
 	return errors
 }
 
-func GetQueuedBuids(db *gorm.DB, limit int) []ServerWithSShKey {
+// validateExistingServerForm handles the "connect existing" flow. We only need
+// enough detail to open an SSH session, so none of the build options apply.
+//
+// The new SSH user and port are mirrored from the ones supplied. Everything
+// downstream (firewall, sites, crons) connects with the New* fields because a
+// built server moves onto them after hardening, and an existing server has no
+// such second identity.
+func validateExistingServerForm(gctx *gin.Context, s *Server) []string {
+	errors := []string{}
+
+	s.SSHUsername = gctx.PostForm("ssh_username")
+	s.SshPort, _ = strconv.Atoi(gctx.PostForm("ssh_port"))
+
+	s.NewSSHUsername = s.SSHUsername
+	s.NewSshPort = s.SshPort
+
+	s.Certbot = 0
+	s.Redis = 0
+	s.Memcache = 0
+	s.MySql = 0
+	s.PhpVersion = ""
+	s.WebserverType = ""
+	s.ScriptableName = ""
+	s.AptPackages = ""
+	s.MySqlRootPassword = ""
+
+	if len(s.ServerName) < 1 {
+		errors = append(errors, "Please give this server a name.")
+	}
+
+	if strings.Count(s.ServerIP, ".") < 3 {
+		errors = append(errors, "IP Address seems invalid. Please enter a valid IP e.g. : 192.168.10.10")
+	}
+
+	if len(s.SSHUsername) < 1 {
+		errors = append(errors, "Please enter the SSH username to connect with.")
+	}
+
+	if s.SshPort < 1 || s.SshPort > 65535 {
+		errors = append(errors, "Please enter a valid SSH port between 1 and 65535.")
+	}
+
+	return errors
+}
+
+func GetQueuedBuids(db *gorm.DB, limit int) []ServerDetails {
 	if limit == 0 {
 		limit = 10
 	}
@@ -195,9 +246,8 @@ func GetQueuedBuids(db *gorm.DB, limit int) []ServerWithSShKey {
 		`SELECT s.ID, s.server_name, s.server_type, s.server_ip,s.private_server_ip,
 		s.ssh_username,s.new_ssh_username,s.redis,s.certbot,s.memcache,
 		s.mysql,s.mysql_root_password,s.php_version,s.webserver_type, s.scriptable_name,s.status,s.ssh_port,s.new_ssh_port,
-		s.apt_packages,k.private_key, k.public_key, k.passphrase, s.team_id
-		FROM servers s 
-		JOIN ssh_keys k ON(k.ID = s.ssh_key_id)
+		s.apt_packages, s.team_id
+		FROM servers s
 		WHERE s.status = ?
 		ORDER BY s.created_at ASC
 		LIMIT ?
@@ -205,10 +255,10 @@ func GetQueuedBuids(db *gorm.DB, limit int) []ServerWithSShKey {
 
 	defer rows.Close()
 
-	var servers []ServerWithSShKey
+	var servers []ServerDetails
 	for rows.Next() {
 
-		var server ServerWithSShKey
+		var server ServerDetails
 		rows.Scan(
 			&server.ID,
 			&server.ServerName,
@@ -229,9 +279,6 @@ func GetQueuedBuids(db *gorm.DB, limit int) []ServerWithSShKey {
 			&server.SshPort,
 			&server.NewSshPort,
 			&server.AptPackages,
-			&server.PrivateKey,
-			&server.PublicKey,
-			&server.Passphrase,
 			&server.TeamId,
 		)
 
@@ -241,16 +288,15 @@ func GetQueuedBuids(db *gorm.DB, limit int) []ServerWithSShKey {
 	return servers
 }
 
-func GetServer(db *gorm.DB, serverId int64, teamId int64) ServerWithSShKey {
-	var server ServerWithSShKey
+func GetServer(db *gorm.DB, serverId int64, teamId int64) ServerDetails {
+	var server ServerDetails
 
 	row := db.Raw(
 		`SELECT s.ID, s.server_name, s.server_type, s.server_ip,s.private_server_ip,
 		s.ssh_username,s.new_ssh_username,s.redis,s.certbot,s.memcache,
 		s.mysql,s.mysql_root_password,s.php_version,s.webserver_type, s.scriptable_name,s.status,s.ssh_port,s.new_ssh_port,
-		s.apt_packages,k.private_key, k.public_key, k.passphrase, s.team_id
-		FROM servers s 
-		JOIN ssh_keys k ON(k.ID = s.ssh_key_id)
+		s.apt_packages, s.team_id
+		FROM servers s
 		WHERE s.ID = ?
 		`, serverId).Row()
 
@@ -274,9 +320,6 @@ func GetServer(db *gorm.DB, serverId int64, teamId int64) ServerWithSShKey {
 		&server.SshPort,
 		&server.NewSshPort,
 		&server.AptPackages,
-		&server.PrivateKey,
-		&server.PublicKey,
-		&server.Passphrase,
 		&server.TeamId,
 	)
 
@@ -289,16 +332,15 @@ func GetServerSimple(db *gorm.DB, serverID int64, teamId int64) *Server {
 	return server
 }
 
-func GetServerByIp(db *gorm.DB, serverIP string, teamId int64) ServerWithSShKey {
-	var server ServerWithSShKey
+func GetServerByIp(db *gorm.DB, serverIP string, teamId int64) ServerDetails {
+	var server ServerDetails
 
 	row := db.Raw(
 		`SELECT s.ID, s.server_name, s.server_type, s.server_ip,s.private_server_ip,
 		s.ssh_username,s.new_ssh_username,s.redis,s.certbot,s.memcache,
 		s.mysql,s.mysql_root_password,s.php_version,s.webserver_type, s.scriptable_name,s.status,s.ssh_port,s.new_ssh_port,
-		s.apt_packages,k.private_key, k.public_key, k.passphrase,s.team_id
-		FROM servers s 
-		JOIN ssh_keys k ON(k.ID = s.ssh_key_id)
+		s.apt_packages, s.team_id
+		FROM servers s
 		WHERE s.server_ip = ?
 		`, serverIP).Row()
 
@@ -322,22 +364,19 @@ func GetServerByIp(db *gorm.DB, serverIP string, teamId int64) ServerWithSShKey 
 		&server.SshPort,
 		&server.NewSshPort,
 		&server.AptPackages,
-		&server.PrivateKey,
-		&server.PublicKey,
-		&server.Passphrase,
 		&server.TeamId,
 	)
 
 	return server
 }
 
-func (s *ServerWithSShKey) SubScriptableVars(script string) string {
+func (s *ServerDetails) SubScriptableVars(script string) string {
 	script = strings.ReplaceAll(script, "#username#", s.NewSSHUsername)
 	script = strings.ReplaceAll(script, "#MYSQL_ROOT_PASSWORD#", utils.Decrypt(s.MySqlRootPassword))
 	script = strings.ReplaceAll(script, "#SSH_PORT#", strconv.Itoa(s.SshPort))
 	script = strings.ReplaceAll(script, "#NEW_SSH_PORT#", strconv.Itoa(s.NewSshPort))
 	script = strings.ReplaceAll(script, "#PHP_VERSION#", s.PhpVersion)
-	script = strings.ReplaceAll(script, "#PUBKEY#", utils.Decrypt(s.PublicKey))
+	script = strings.ReplaceAll(script, "#PUBKEY#", strings.Join(sshclient.LocalPublicKeys(), "\n"))
 	script = strings.ReplaceAll(script, "#SERVER_IP#", s.ServerIP)
 
 	FPMPort := "90" + strings.ReplaceAll(s.PhpVersion, ".", "")

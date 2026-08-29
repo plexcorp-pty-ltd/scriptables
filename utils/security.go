@@ -13,10 +13,16 @@ import (
 )
 
 var RANDOM_BYTES = []byte{35, 46, 57, 24, 85, 35, 24, 74, 87, 35, 88, 98, 66, 32, 14, 05}
-var CIPER_SECRET string = os.Getenv("ENCRYPTION_KEY")
+
+// cipherSecret reads the key on every call rather than at package init. Package
+// level vars are initialised before main() runs, which would capture an empty
+// key before the .env file has been loaded.
+func cipherSecret() []byte {
+	return []byte(os.Getenv("ENCRYPTION_KEY"))
+}
 
 func Encrypt(text string) string {
-	block, err := aes.NewCipher([]byte(CIPER_SECRET))
+	block, err := aes.NewCipher(cipherSecret())
 	if err != nil {
 		fmt.Println(err)
 		return ""
@@ -29,7 +35,7 @@ func Encrypt(text string) string {
 }
 
 func Decrypt(text string) string {
-	block, err := aes.NewCipher([]byte(CIPER_SECRET))
+	block, err := aes.NewCipher(cipherSecret())
 	if err != nil {
 		fmt.Println(err)
 		return ""

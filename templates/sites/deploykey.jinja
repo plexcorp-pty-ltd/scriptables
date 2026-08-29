@@ -1,54 +1,45 @@
-
-
-<div class="row">
-    <div class="col-md-12 bg-white px-5 py-5">
-
-        <div class="col-md-12">
-            <h2>{{title}}</h2>
-           <p> Generating a deploy key... Once done the key will appear below - please copy and paste this key under deploy keys in your Github/Bitbucket/Gitlab settings.</p>
-           <p>
-           You will also need to copy and add the following URL to your webhook settings (Enable only PUSH/MERGE events): {{scriptable_base_url}}/webhooks/deploy/{{siteId}}/{{token}}</b></li>
-     
-
-        </p>
-        </div>
-
-        <div class="col-md-12" style="min-height:20vh;">
-
-              <div id="pubkey-container">
-              <img src="/static/img/loader.gif" />
-            </div>
-
-            <div id="showConfirmForm">
-                <form method="post" action="/site/confirm-deploy">
-                <input type="hidden" name="siteId" value="{{siteId}}" />
-                <input type="submit" class="btn btn-success" style="font-weight:bold" value="I have done the GIT setup. Please continue with the deploy." />
-            </div>
-
-
-        </div>
-        </div>
+<div class="page-header d-print-none mb-3">
+  <div class="row g-2 align-items-center">
+    <div class="col">
+      <div class="page-pretitle">Sites</div>
+      <h2 class="page-title">{{title}}</h2>
+    </div>
+  </div>
 </div>
 
-  <script type="text/javascript">
-  document.getElementById("showConfirmForm").style.display="none";
-    window.onload = function () {
-      
-        (async () => {
-          let fd = new FormData();
-          fd.append("siteId", {{siteId}})
-          pubkey = await fetch('/site/generateDeployKey/', {
-            "body": new URLSearchParams(fd),
-            "method": "POST",
-          }).then(json => json.json());
-          
-          if (pubkey && typeof pubkey.pubkey != 'undefined') {
-            document.getElementById("pubkey-container").innerHTML = "<textarea style=\"width:100%;height:20vh\">" + atob(pubkey.pubkey) + "</textarea> ";
-            document.getElementById("showConfirmForm").style.display="block";
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+    <div class="card mb-3">
+      <div class="card-header">
+        <h3 class="card-title">
+          <i class="ti ti-brand-git me-2"></i>Deploy key
+        </h3>
+      </div>
+      <div class="card-body">
+        {# Outside the swap target so the retry button can reuse it. #}
+        <div id="deploykey-progress" class="htmx-indicator">
+          <div class="progress progress-sm mb-2">
+            <div class="progress-bar progress-bar-indeterminate"></div>
+          </div>
+          <p class="text-secondary">Generating a deploy key on the server&hellip;</p>
+        </div>
 
-          } else {
-            document.getElementById("pubkey-container").innerHTML = "<div class=\"alert alert-danger\">Sorry, failed to generate a pub key. Click here to <a href=\"/site/deployKey/{{siteId}}\">Try again.</a></div>"
-          }
-        })();
-    }
-  </script>
+        <div id="deploykey-result" hx-post="/site/generateDeployKey" hx-vals='{"siteId": "{{siteId}}"}'
+          hx-trigger="load" hx-swap="innerHTML" hx-indicator="#deploykey-progress"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Push webhook</h3>
+      </div>
+      <div class="card-body">
+        <p class="text-secondary">
+          Add this URL to your repository webhook settings and enable <strong>push / merge events only</strong>.
+        </p>
+        <input type="text" class="form-control font-monospace" readonly onclick="this.select()"
+          value="{{scriptable_base_url}}/webhooks/deploy/{{siteId}}/{{token}}" />
+      </div>
+    </div>
+  </div>
+</div>

@@ -81,7 +81,6 @@ CREATE TABLE `servers` (
   `server_type` varchar(50) DEFAULT NULL,
   `server_ip` varchar(100) DEFAULT NULL,
   `private_server_ip` varchar(100) DEFAULT NULL,
-  `ssh_key_id` bigint(20) DEFAULT NULL,
   `ssh_username` varchar(100) DEFAULT NULL,
   `new_ssh_username` varchar(100) DEFAULT NULL,
   `ssh_port` bigint(20) DEFAULT NULL,
@@ -115,7 +114,6 @@ CREATE TABLE `sites` (
   `deploy_scriptables` varchar(100) DEFAULT NULL,
   `site_name` longtext DEFAULT NULL,
   `server_id` bigint(20) DEFAULT NULL,
-  `ssh_key_id` bigint(20) DEFAULT NULL,
   `webroot` varchar(100) DEFAULT NULL,
   `php_version` varchar(50) DEFAULT NULL,
   `lets_encrypt_certificate` tinyint(3) DEFAULT NULL,
@@ -128,25 +126,6 @@ CREATE TABLE `sites` (
   `team_id` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_sites_deleted_at` (`deleted_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-
-
-CREATE TABLE `ssh_keys` (
-  `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `created_at` datetime(3) DEFAULT NULL,
-  `updated_at` datetime(3) DEFAULT NULL,
-  `deleted_at` datetime(3) DEFAULT NULL,
-  `name` varchar(100) DEFAULT NULL,
-  `private_key` longtext DEFAULT NULL,
-  `public_key` longtext DEFAULT NULL,
-  `passphrase` varchar(255) DEFAULT NULL,
-  `team_id` int(11) DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `idx_ssh_keys_deleted_at` (`deleted_at`),
-  KEY `created_at` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;

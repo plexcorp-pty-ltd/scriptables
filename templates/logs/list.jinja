@@ -1,93 +1,82 @@
-<div class="row">
-<div class="col-md-12">
-<h2 class="az-dashboard-title">Server logs for : {{server.ServerName}} - {{server.ServerIP}}</h2>
+<div class="page-header d-print-none mb-3">
+  <div class="row g-2 align-items-center">
+    <div class="col">
+      <div class="page-pretitle">Servers</div>
+      <h2 class="page-title">Server logs for {{server.ServerName}} ({{server.ServerIP}})</h2>
+    </div>
+  </div>
+</div>
+
+<div class="card" id="log-card">
+  <div class="card-body border-bottom py-3">
+    <form action="/logs/server/{{server.ID}}?page={{page}}" method="GET">
+      <div class="d-flex flex-wrap align-items-center gap-2">
+        <select name="log_level" class="form-select w-auto">
+          <option value="" {% if log_level == "" %}selected{% endif %}>All logs</option>
+          <option value="info" {% if log_level == "info" %}selected{% endif %}>Info logs</option>
+          <option value="error" {% if log_level == "error" %}selected{% endif %}>Error logs</option>
+        </select>
+
+        <button type="submit" class="btn">
+          <i class="ti ti-search me-1"></i>Filter
+        </button>
+
+        {% if server.Status == STATUS_QUEUED or server.Status == STATUS_RUNNING %}
+        {# While a build runs, htmx re-fetches this page every 10s and swaps just
+           the log card back in - no full page reload, no scroll jump. #}
+        <span class="badge bg-blue-lt ms-auto" hx-get="/logs/server/{{server.ID}}?page={{page}}{{logLevelQuery}}"
+          hx-trigger="every 10s" hx-select="#log-card" hx-target="#log-card" hx-swap="outerHTML">
+          <span class="spinner-border spinner-border-sm me-2" role="status"></span>Build in progress
+        </span>
+        {% endif %}
+      </div>
+    </form>
   </div>
 
-    
-    <div class="col-md-12">
-    
-        <div class="card">
-            <div class="card-body">
-            
-                <form action="/logs/server/{{ server.ID }}?page={{ page }}" method="GET">
-                    <div style="display:grid;grid-template-columns: 1fr 1fr 1fr;margin-bottom:10px;">
+  <div class="table-responsive">
+    <table class="table table-vcenter card-table">
+      <thead>
+        <tr>
+          <th>Summary</th>
+          <th class="w-1">Level</th>
+          <th class="w-1">Full log</th>
+          <th>Date &amp; time</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+        <tr>
+          <td>{{log.LogSummary}}</td>
+          <td>
+            {% if log.LogLevel == "Info" %}
+            <span class="badge bg-success-lt">Info</span>
+            {% else %}
+            <span class="badge bg-danger-lt">Error</span>
+            {% endif %}
+          </td>
+          <td>
+            <a href="/log/full/server/{{log.ID}}" target="_blank" class="btn btn-icon btn-sm" title="View full log"
+              data-bs-toggle="tooltip">
+              <i class="ti ti-eye"></i>
+            </a>
+          </td>
+          <td class="text-secondary">{{log.CreatedAt}}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 
-                        <div>
-                            <select name="log_level" class="form-control">
-                                <option value="" {% if log_level == "" %} selected {% endif %}>All Logs</option>
-                                <option value="info" {% if log_level == "info" %} selected {% endif %}>Info logs
-                                </option>
-                                <option value="error" {% if log_level == "error" %} selected {% endif %}>Error logs
-                                </option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <button type="Filter" class="btn btn-lg btn-default">
-                                <i class="fa fa-search"></i>
-                            </button>
-                        </div>
-                        <div>
-
-                            {% if server.Status == STATUS_QUEUED or server.Status == STATUS_RUNNING %}
-                            <img src="/static/img/loader.gif" style="max-width:50px" /> build in progress.
-                            <script>
-                                setTimeout(function() {
-                                    window.location.reload();
-                                }, 10000)
-                            </script>
-                            {% endif %}
-                        </div>
-                    </div>
-
-
-                </form>
-
-                <table class="table table-bordered">
-                    <thead>
-                        <tr>
-                            <th>Summary</th>
-                            <th>Log Level</th>
-                            <th>Full Log</th>
-                            <th>Date & Time</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for log in logs %}
-                        <tr>
-                            <td>{{ log.LogSummary }}</td>
-                            <td>
-                                {% if log.LogLevel == "Info" %}
-                                <i class="fa fa-check-circle" aria-hidden="true" style="color: green"></i>
-                                {% else %}
-                                <i class="fa fa-exclamation-circle" aria-hidden="true" style="color: red"></i>
-                                {% endif %}
-                            </td>
-                            <td><a href="/log/full/server/{{ log.ID }}" target="_blank">View</a></td>
-                            <td>{{ log.CreatedAt }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="card-footer clearfix">
-                <ul class="pagination pagination-sm m-0 float-right">
-                    {% if prevPage > 0 %}
-                    <li class="page-item">
-                        <a class="page-link"
-                            href="/logs/server/{{ server.ID }}?page={{ prevPage }}{{ logLevelQuery }}">
-                            << Prev</a>
-                    </li>
-                    {% endif %}
-
-                    <li class="page-item">
-                        <a class="page-link"
-                            href="/logs/server/{{ server.ID }}?page={{ nextPage }}{{ logLevelQuery }}">Next
-                            >></a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </div>
+  <div class="card-footer d-flex align-items-center">
+    <ul class="pagination m-0 ms-auto">
+      {% if prevPage > 0 %}
+      <li class="page-item">
+        <a class="page-link" href="/logs/server/{{server.ID}}?page={{prevPage}}{{logLevelQuery}}">Prev</a>
+      </li>
+      {% endif %}
+      <li class="page-item">
+        <a class="page-link" href="/logs/server/{{server.ID}}?page={{nextPage}}{{logLevelQuery}}">Next</a>
+      </li>
+    </ul>
+  </div>
 </div>

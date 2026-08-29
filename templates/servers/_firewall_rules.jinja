@@ -1,0 +1,90 @@
+{# Rules list fragment. Returned by the load, add and delete endpoints so every
+   mutation refreshes the table from the server's real ufw state. #}
+{% if errorMsg is defined %}
+<div class="alert alert-danger m-3" role="alert">
+  <div class="d-flex">
+    <div class="me-3"><i class="ti ti-alert-circle icon alert-icon"></i></div>
+    <div>
+      <h4 class="alert-title">Firewall command failed</h4>
+      <div class="text-secondary">{{ errorMsg }}</div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if successMsg is defined %}
+<div class="alert alert-success m-3" role="alert">
+  <div class="d-flex">
+    <div class="me-3"><i class="ti ti-circle-check icon alert-icon"></i></div>
+    <div class="text-secondary">{{ successMsg }}</div>
+  </div>
+</div>
+{% endif %}
+
+{% if numRules == 0 %}
+<div class="empty">
+  <div class="empty-icon"><i class="ti ti-flame text-secondary" style="font-size:3rem"></i></div>
+  <p class="empty-title">No firewall rules</p>
+  <p class="empty-subtitle text-secondary">Add a rule above to get started.</p>
+</div>
+{% else %}
+<div class="table-responsive">
+  <table class="table table-vcenter card-table">
+    <thead>
+      <tr>
+        <th>Rule</th>
+        <th class="w-1"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for rule in rules %}
+      <tr>
+        <td class="font-monospace">{{ rule.Text }}</td>
+        <td>
+          <button type="button" class="btn btn-icon btn-sm btn-ghost-danger" data-bs-toggle="modal"
+            data-bs-target="#delete-rule-{{ rule.Number }}" title="Delete rule">
+            <i class="ti ti-trash"></i>
+          </button>
+
+          {# One modal per row keeps the confirm fully declarative - no JS. #}
+          <div class="modal modal-blur fade" id="delete-rule-{{ rule.Number }}" tabindex="-1" role="dialog"
+            aria-hidden="true">
+            <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+              <div class="modal-content">
+                <div class="modal-body text-center py-4">
+                  <i class="ti ti-alert-triangle text-danger mb-2" style="font-size:3rem"></i>
+                  <h3>Are you sure?</h3>
+                  <div class="text-secondary">
+                    You are about to delete this firewall rule. This cannot be undone.
+                    <div class="font-monospace mt-2">{{ rule.Text }}</div>
+                  </div>
+                </div>
+                <div class="modal-footer">
+                  <form class="w-100" hx-post="/server/firewall/delete/rule" hx-target="#firewall-rules"
+                    hx-swap="innerHTML" hx-indicator="#firewall-loading" hx-disabled-elt="find button[type=submit]">
+                    <input type="hidden" name="_csrf_token" value="{{ _csrf_token }}" />
+                    <input type="hidden" name="server_id" value="{{ serverID }}" />
+                    <input type="hidden" name="rule_number" value="{{ rule.Number }}" />
+                    <input type="hidden" name="rule" value="{{ rule.Text }}" />
+                    <div class="row">
+                      <div class="col">
+                        <button type="button" class="btn w-100" data-bs-dismiss="modal">Cancel</button>
+                      </div>
+                      <div class="col">
+                        <button type="submit" class="btn btn-danger w-100" data-bs-dismiss="modal">
+                          Delete rule
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}

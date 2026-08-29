@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"encoding/base64"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -33,9 +32,6 @@ func (c *Controller) CreateSite(gctx *gin.Context) {
 	servers := []models.Server{}
 	c.GetDB(gctx).Where("team_id=?", sessUser.TeamId).Find(&servers)
 
-	sshKeys := []models.SshKey{}
-	c.GetDB(gctx).Where("team_id=?", sessUser.TeamId).Find(&sshKeys)
-
 	password := utils.GenPassword()
 	c.Render("sites/create", gonja.Context{
 		"title":                   "Setup website",
@@ -49,7 +45,6 @@ func (c *Controller) CreateSite(gctx *gin.Context) {
 		"deploy_scriptables":      "laraveldeploy",
 		"mysql_password":          password,
 		"mysql_password_confirm":  password,
-		"sshKeys":                 sshKeys,
 		"servers":                 servers,
 		"environment":             "prod",
 		"branch":                  "master",
@@ -273,86 +268,77 @@ func (c *Controller) CreateSiteDeployKey(gctx *gin.Context) {
 
 }
 
+// GenerateDeployKey creates the repository deploy key on the target server and
+// returns an HTML fragment for htmx: either the key itself plus the continue
+// button, or an error with a retry action.
 func (c *Controller) GenerateDeployKey(gctx *gin.Context) {
-	type Response struct {
-		Success bool   `json:"success"`
-		Error   string `json:"error"`
-		PubKey  string `json:"pubkey"`
+	siteId, e := strconv.ParseInt(gctx.PostForm("siteId"), 10, 64)
+	sessUser := c.GetSessionUser(gctx)
+	db := c.GetDB(gctx)
+
+	fail := func(reason string) {
+		c.RenderWithoutLayout("sites/_deploykey", gonja.Context{
+			"siteId":   siteId,
+			"errorMsg": reason,
+		}, gctx)
 	}
 
-	siteId, e := strconv.ParseInt(gctx.PostForm("siteId"), 10, 64)
-
 	if siteId == 0 || e != nil {
-		msg := Response{Success: false, Error: "Please specify a site key"}
-		gctx.JSON(400, msg)
+		fail("No site was specified.")
 		return
 	}
 
 	var site models.Site
-	sessUser := c.GetSessionUser(gctx)
-
-	db := c.GetDB(gctx)
 	db.Where("id=? and team_id = ?", siteId, sessUser.TeamId).First(&site)
 
 	if site.ID == 0 || site.TeamId != sessUser.TeamId {
-		msg := Response{Success: false, Error: "Sorry, seems like theres a permission issue. Please try again."}
-		gctx.JSON(400, msg)
+		fail("You do not have permission to access this site.")
 		return
 	}
 
 	server := models.GetServer(db, site.ServerID, site.TeamId)
-
 	username := utils.Slugify(site.SiteName)
 	keyPath := models.GetSiteDeployPubKeyPath(siteId, site.SiteName, username)
-	cmd, err := utils.GetSharedScriptable("deploy_keysetup")
 
+	cmd, err := utils.GetSharedScriptable("deploy_keysetup")
 	if err != nil {
-		msg := Response{Success: false, Error: "Failed to find deploy key setup script. Please check that a script named: deploy_keysetup.sh exists in scriptables/__shared/."}
-		gctx.JSON(400, msg)
+		fail("Could not find the deploy key setup script. Check that scriptables/__shared/deploy_keysetup.sh exists.")
 		return
 	}
 
 	cmd = site.SubScriptableSiteVarsOnly(cmd)
 
 	client, err := models.GetSSHClient(&server, false)
-
 	if client == nil || err != nil {
-		msg := Response{Success: false, Error: "Failed to connect to server via SSH, please try again."}
-		gctx.JSON(400, msg)
+		fail("Failed to connect to " + server.ServerName + " over SSH. Please try again.")
 		return
 	}
 
 	summary := "Create deploy key:" + site.SiteName + " for server: " + server.ServerName
-	err, output := models.RunScriptable(c.GetDB(gctx), "site", site.ID, client, cmd, summary, false, sessUser.TeamId)
+	err, output := models.RunScriptable(db, "site", site.ID, client, cmd, summary, false, sessUser.TeamId)
 
 	if utils.LogVerbose() {
 		fmt.Println(err, output)
 	}
 
 	if err != nil {
-		msg := Response{Success: false, Error: "Failed to create SSH key ` + keyPath + ` on server: ` + server.ServerName + `."}
-		gctx.JSON(400, msg)
+		fail("Failed to create the SSH key " + keyPath + " on " + server.ServerName + ".")
 		return
 	}
 
 	pubKey, err := sshclient.ReadFileWithSudo(client, keyPath+".pub")
-	publicKey := string(pubKey)
+	publicKey := strings.TrimSpace(string(pubKey))
+
 	if err != nil || publicKey == "" {
-		if err != nil {
-			msg := Response{Success: false, Error: "Failed to connect to create SSH key ` + keyPath + ` on server: ` + server.ServerName + `."}
-			gctx.JSON(400, msg)
-			return
-		}
-	}
-
-	if err == nil {
-		publicKey := base64.StdEncoding.EncodeToString([]byte(publicKey))
-
-		msg := Response{Success: true, PubKey: publicKey}
-		gctx.JSON(200, msg)
+		fail("Created the key but could not read " + keyPath + ".pub back from " + server.ServerName + ".")
 		return
 	}
 
+	c.RenderWithoutLayout("sites/_deploykey", gonja.Context{
+		"siteId":      siteId,
+		"publicKey":   publicKey,
+		"_csrf_token": c.SetAndGetCSRFToken(gctx),
+	}, gctx)
 }
 
 func (c *Controller) DeployBranch(gctx *gin.Context) {

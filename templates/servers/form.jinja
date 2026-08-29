@@ -1,130 +1,70 @@
-<div class="row">
-  <div class="col-md-12 mb-2">
-<h2 class="az-dashboard-title">{{title}}</h2>
+<div class="page-header d-print-none mb-3">
+  <div class="row g-2 align-items-center">
+    <div class="col">
+      <div class="page-pretitle">Servers</div>
+      <h2 class="page-title">{{title}}</h2>
+    </div>
   </div>
+</div>
 
-  <div class="col-md-12">
-    <div class="card card-info">
+<form method="post" action="{{action}}">
+  <input type="hidden" name="_csrf_token" value="{{_csrf_token}}" />
 
-      <form class="form-horizontal" method="post" action="{{action}}">
-        <input type="hidden" name="csrftoken" value="{{csrftoken}}" />
-        
+  <div class="row row-cards">
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Server details</h3>
+        </div>
         <div class="card-body">
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label required">Public server IP address</label>
+              <input type="text" class="form-control" required name="server_ip" value="{{ServerIP}}"
+                placeholder="192.168.10.10" />
+            </div>
 
-          <div class="form-group row">
-            <label class="col-sm-2 col-form-label"
-              >SSH Key*</label
-            >
-            <div class="col-sm-10">
-                <select class="form-control" required name="ssh_key_id">
-                    {% for key in sshKeys %}
-                        <option value="{{key.ID}}">{{key.Name}}</option>
-                    {% endfor %}
-                </select>
-            </div>
-          </div>
-                 <div class="form-group row">
-            <label class="col-sm-2 col-form-label"
-              >Public Server IP Address*</label
-            >
-            <div class="col-sm-10">
-                <input type="text" class="form-control" required name="server_ip" value="{{ServerIP}}" />
-            </div>
-          </div>
-          
-          <div class="form-group row">
-            <label class="col-sm-2 col-form-label"
-              >Server name*</label
-            >
-            <div class="col-sm-10">
-                <input type="text" class="form-control" required name="server_name" value="{{ServerName}}" />
-            </div>
-          </div>
-          <div class="form-group row">
-            <label class="col-sm-2 col-form-label"
-              >Server Type</label
-            >
-            <div class="col-sm-10">
-                <input type="text" class="form-control" required name="server_type" value="{{ServerType}}" readonly />
+            <div class="col-md-6 mb-3">
+              <label class="form-label required">Server name</label>
+              <input type="text" class="form-control" required name="server_name" value="{{ServerName}}"
+                placeholder="web-01" />
             </div>
           </div>
 
-          <div class="form-group row">
-            <label class="col-sm-2 col-form-label"
-              >Scriptables  {% if ServerType == "scriptable" %} * {% endif %} <i class="fas fa-question-circle" title="In addition to the default builder for this server type. You can write extensions to execute further steps."></i></label>
-            <div class="col-sm-10">
-                <input type="text" class="form-control" value="{{ScriptableName}}" name="scriptable_name"
-                {% if ServerType == "scriptable" %}
-                placeholder="Comma seperated list of folder name(s) of scripts found inside root scriptables/ directory."
-                required
-                {% else %}
-                placeholder="Comma seperated list of folder name(s) of scripts found inside root scriptables/ directory. (Optional)"
-                {% endif %}
-                 />
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Server type</label>
+              <input type="text" class="form-control" name="server_type" value="{{ServerType}}" readonly />
+            </div>
+
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Private server IP address</label>
+              <input type="text" class="form-control" name="private_server_ip" value="{{PrivateServerIP}}"
+                placeholder="Optional" />
+              <small class="form-hint">For internal networking between servers. Defaults to the public IP.</small>
             </div>
           </div>
 
-
-   
-
-          <div class="form-group row">
-            <label class="col-sm-2 col-form-label"
-              >Private Server IP Address</label
-            >
-            <div class="col-sm-10">
-                <input type="text" class="form-control" name="private_server_ip" value="{{PrivateServerIP}}" placeholder="Optional - for internal networking between servers. Defaults to the public IP if not set." />
-            </div>
+          {% if not isExisting %}
+          <div class="mb-3">
+            <label class="form-label{% if ServerType == "scriptable" %} required{% endif %}">
+              Scriptables
+              <span class="form-help" data-bs-toggle="tooltip"
+                title="In addition to the default builder for this server type, you can write extensions to execute further steps.">?</span>
+            </label>
+            <input type="text" class="form-control" value="{{ScriptableName}}" name="scriptable_name"
+              {% if ServerType == "scriptable" %}required{% endif %}
+              placeholder="Comma separated folder name(s) inside the scriptables/ directory{% if ServerType != "scriptable" %} (optional){% endif %}" />
           </div>
 
-
-          {% if ServerType == "lemp" %}
-          <div class="form-group row">
-            <label class="col-sm-2 col-form-label"
-              >PHP Version*</label
-            >
-            <div class="col-sm-10">
-                <select class="form-control" required name="php_version">
-                  <option value="8.2"  {% if PhpVersion == "8.2" %} selected {% endif %}>8.2</option>
-                  <option value="8.1"  {% if PhpVersion == "8.1" %} selected {% endif %}>8.1</option>
-                  <option value="7.4"  {% if PhpVersion == "7.4" %} selected {% endif %}>7.4</option>
-                  <option value="7.3"  {% if PhpVersion == "7.3" %} selected {% endif %}>7.3</option>
-                  <option value="7.2" {% if PhpVersion == "7.2" %} selected {% endif %}>7.2</option>
-                </select>
-            </div>
-          </div>
-          {% endif %}
-
-          {% if ServerType == "lamp" %}
-          <div class="form-group row">
-            <label class="col-sm-2 col-form-label"
-              >PHP Version*</label
-            >
-            <div class="col-sm-10">
-                <select class="form-control" required name="php_version">
-                  <option value="8.2"  {% if PhpVersion == "8.2" %} selected {% endif %}>8.2</option>
-                  <option value="8.1"  {% if PhpVersion == "8.1" %} selected {% endif %}>8.1</option>
-                  <option value="7.4"  {% if PhpVersion == "7.4" %} selected {% endif %}>7.4</option>
-                  <option value="7.3"  {% if PhpVersion == "7.3" %} selected {% endif %}>7.3</option>
-                  <option value="7.2" {% if PhpVersion == "7.2" %} selected {% endif %}>7.2</option>
-                </select>
-            </div>
-          </div>
-          {% endif %}
-
-          {% if ServerType == "php" %}
-          <div class="form-group row">
-            <label class="col-sm-2 col-form-label"
-              >PHP Version*</label
-            >
-            <div class="col-sm-10">
-                <select class="form-control" required name="php_version">
-                  <option value="8.2"  {% if PhpVersion == "8.2" %} selected {% endif %}>8.2</option>
-                  <option value="8.1"  {% if PhpVersion == "8.1" %} selected {% endif %}>8.1</option>
-                  <option value="7.4"  {% if PhpVersion == "7.4" %} selected {% endif %}>7.4</option>
-                  <option value="7.3"  {% if PhpVersion == "7.3" %} selected {% endif %}>7.3</option>
-                  <option value="7.2" {% if PhpVersion == "7.2" %} selected {% endif %}>7.2</option>
-                </select>
-            </div>
+          {% if ServerType == "lemp" or ServerType == "lamp" or ServerType == "php" %}
+          <div class="mb-3">
+            <label class="form-label required">PHP version</label>
+            <select class="form-select" required name="php_version">
+              <option value="8.5" {% if PhpVersion == "8.5" %}selected{% endif %}>8.5</option>
+              <option value="8.4" {% if PhpVersion == "8.4" %}selected{% endif %}>8.4</option>
+              <option value="8.3" {% if PhpVersion == "8.3" %}selected{% endif %}>8.3</option>
+            </select>
           </div>
           {% endif %}
 
@@ -141,151 +81,142 @@
           <input type="hidden" name="webserver_type" value="apache2" />
           {% endif %}
 
-          {% if ServerType == 'lemp' %}
-          <div class="form-group row">
-            <label class="col-sm-2 col-form-label"
-              >MySQL root password*</label
-            >
-            <div class="col-sm-10">
-                <input type="password" class="form-control" required name="mysql_root_password" value="{{MySqlRootPassword}}" />
+          {% if ServerType == 'lemp' or ServerType == 'lamp' or ServerType == 'mysql' %}
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label required">MySQL root password</label>
+              <input type="password" class="form-control" required name="mysql_root_password"
+                value="{{MySqlRootPassword}}" />
             </div>
-          </div>
-
-          <div class="form-group row">
-            <label class="col-sm-2 col-form-label"
-              >Confirm MySQL Root Password*</label
-            >
-            <div class="col-sm-10">
-                <input type="password" class="form-control" required name="confirm_mysql_root_password" value="{{MySqlRootPassword}}" />
+            <div class="col-md-6 mb-3">
+              <label class="form-label required">Confirm MySQL root password</label>
+              <input type="password" class="form-control" required name="confirm_mysql_root_password"
+                value="{{MySqlRootPassword}}" />
             </div>
           </div>
           {% endif %}
-          
-          {% if ServerType == 'lamp' %}
-          <div class="form-group row">
-            <label class="col-sm-2 col-form-label"
-              >MySQL root password*</label
-            >
-            <div class="col-sm-10">
-                <input type="password" class="form-control" required name="mysql_root_password"  value="{{MySqlRootPassword}}" />
-            </div>
+
+          <div class="mb-3">
+            <label class="form-label">
+              Additional apt packages
+            </label>
+            <textarea name="apt_packages" id="apt_packages" class="form-control" rows="2"
+              placeholder="Comma separated list of any additional apt packages to install.">{{AptPackages}}</textarea>
           </div>
 
-          <div class="form-group row">
-            <label class="col-sm-2 col-form-label"
-              >Confirm MySQL Root Password*</label
-            >
-            <div class="col-sm-10">
-                <input type="password" class="form-control" required name="confirm_mysql_root_password" value="{{MySqlRootPassword}}" />
+          <div>
+            <label class="form-label">
+              SSL &amp; cache options
+              {% if ServerType == 'cache' %}<span class="text-danger">(select redis or memcache)</span>{% endif %}
+            </label>
+            <div class="d-flex flex-wrap gap-4">
+              <label class="form-check form-check-inline mb-0">
+                <input class="form-check-input" type="checkbox" name="certbot" {% if Certbot == 1 %}checked{% endif %} />
+                <span class="form-check-label">Certbot</span>
+              </label>
+              <label class="form-check form-check-inline mb-0">
+                <input class="form-check-input" type="checkbox" name="redis" {% if Redis == 1 %}checked{% endif %} />
+                <span class="form-check-label">Redis</span>
+              </label>
+              <label class="form-check form-check-inline mb-0">
+                <input class="form-check-input" type="checkbox" name="memcache" {% if Memcache == 1 %}checked{% endif %} />
+                <span class="form-check-label">Memcache</span>
+              </label>
             </div>
           </div>
-          {% endif %} 
-
-          {% if ServerType == 'mysql' %}
-          <div class="form-group row">
-            <label class="col-sm-2 col-form-label"
-              >MySQL root password*</label
-            >
-            <div class="col-sm-10">
-                <input type="password" class="form-control" required name="mysql_root_password" value="{{MySqlRootPassword}}" />
-            </div>
-          </div>
-
-          <div class="form-group row">
-            <label class="col-sm-2 col-form-label"
-              >Confirm MySQL Root Password*</label
-            >
-            <div class="col-sm-10">
-                <input type="password" class="form-control" required name="confirm_mysql_root_password" value="{{MySqlRootPassword}}" />
-            </div>
-          </div>
-          {% endif %} 
-          <div class="row mb-4 mt-4">
-            <div class="col-md-6">
-                  <label>SSH username*</label>
-                <input type="text" class="form-control" required name="ssh_username" value="{{SSHUsername}}" />
-
-            </div>
-
-            <div class="col-md-6">
-      
-
-              <label>New SSH username* <i class="fas fa-question-circle" title="For better security - an SSH user will be created and root will be disabled. You can then login with the user specificed here."></i></label>
-              <input type="text" class="form-control" required name="new_ssh_username" value="{{NewSSHUsername}}" />
-
-
-            </div>
-
-          </div>
-
-          <br />
-          <div class="row">
-            <div class="col-md-6">
-              <div class="form-group row">
-                <label class="col-sm-2 col-form-label"
-                  >SSH Port*</label
-                >
-                <div class="col-sm-10">
-                    <input type="number" class="form-control" id="ssh_port" required name="ssh_port" value="{{SshPort}}" />
-             
-                </div>
-              </div>
-    
-              <div class="form-group row">
-                <label class="col-sm-2 col-form-label"
-                  >New SSH Port* <i class="fas fa-question-circle" title="Scriptables will change the default SSH port from 22 to whatever you specify here."></i></label
-                >
-                <div class="col-sm-10">
-                    <input type="number" class="form-control" id="new_ssh_port" required name="new_ssh_port" value="{{NewSshPort}}" />
-            
-                </div>
-              </div>
-            </div>
- 
-            <div class="col-md-6">
-              <div class="form-group row">
-    
-                <div class="col-sm-12">
-                    <textarea name="apt_packages" id="apt_packages" class="form-control" placeholder="Comma seperated list of any additional apt packages you want to install.">{{AptPackages}}</textarea>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="form-group row">
-            <div class="col-md-12">
-                <label> SSL & Cache options {% if ServerType == 'cache' %} * (select redis or memcache){% endif %} :</label><br />
-                <input type="checkbox"  name="certbot" {% if Certbot == 1 %}checked{% endif %}/> Certbot &nbsp;&nbsp;&nbsp;
-                <input type="checkbox" name="redis" {% if Redis== 1 %}checked{% endif %}/> Redis &nbsp;&nbsp;&nbsp;
-                <input type="checkbox"  name="memcache" {% if Memcache== 1 %}checked{% endif %}/> Memcache
-
-
-            </div>
-          </div>
+          {% endif %}
         </div>
+      </div>
+    </div>
 
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">SSH access</h3>
+        </div>
+        <div class="card-body">
+          <div class="alert alert-info" role="alert">
+            <div class="d-flex">
+              <div class="me-2"><i class="ti ti-key icon alert-icon"></i></div>
+              <div class="text-secondary">
+                Scriptables authenticates with the <strong>{{sshKeyCount}}</strong> usable SSH key(s)
+                in <code>{{sshDir}}</code> plus anything in your ssh-agent. There is nothing to
+                upload or store.
+                {% if isExisting %}
+                <div class="mt-2">
+                  We only verify the connection. Nothing is installed and no settings are changed.
+                </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          {% if sshKeyCount > 6 %}
+          <div class="alert alert-warning" role="alert">
+            <div class="d-flex">
+              <div class="me-2"><i class="ti ti-alert-triangle icon alert-icon"></i></div>
+              <div class="text-secondary">
+                Most SSH servers allow only 6 authentication attempts. With {{sshKeyCount}} keys the
+                right one may never be reached. Set <code>SCRIPTABLES_SSH_KEYS</code> to a
+                comma separated list of the key files to use.
+              </div>
+            </div>
+          </div>
+          {% endif %}
+
+          {% if isExisting %}
+          <div class="mb-3">
+            <label class="form-label required">SSH username</label>
+            <input type="text" class="form-control" required name="ssh_username" value="{{SSHUsername}}"
+              placeholder="root" />
+            <small class="form-hint">The user Scriptables will log in as.</small>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label required">SSH port</label>
+            <input type="number" class="form-control" id="ssh_port" required name="ssh_port" value="{{SshPort}}"
+              placeholder="22" />
+          </div>
+          {% else %}
+          <div class="mb-3">
+            <label class="form-label required">SSH username</label>
+            <input type="text" class="form-control" required name="ssh_username" value="{{SSHUsername}}" />
+            <small class="form-hint">The user that exists today, usually <code>root</code>.</small>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label required">
+              New SSH username
+              <span class="form-help" data-bs-toggle="tooltip"
+                title="For better security an SSH user is created and root is disabled. You then log in with the user specified here.">?</span>
+            </label>
+            <input type="text" class="form-control" required name="new_ssh_username" value="{{NewSSHUsername}}" />
+          </div>
+
+          <div class="row">
+            <div class="col-6 mb-3">
+              <label class="form-label required">SSH port</label>
+              <input type="number" class="form-control" id="ssh_port" required name="ssh_port" value="{{SshPort}}" />
+            </div>
+            <div class="col-6 mb-3">
+              <label class="form-label required">
+                New SSH port
+                <span class="form-help" data-bs-toggle="tooltip"
+                  title="Scriptables changes the default SSH port from 22 to whatever you specify here.">?</span>
+              </label>
+              <input type="number" class="form-control" id="new_ssh_port" required name="new_ssh_port"
+                value="{{NewSshPort}}" />
+            </div>
+          </div>
+          {% endif %}
+        </div>
 
         <div class="card-footer">
-          <button type="submit" class="btn btn-primary">{{actionType}}</button>
-
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="ti ti-rocket me-2"></i>{{actionType}}
+          </button>
         </div>
-      </form>
+      </div>
     </div>
   </div>
-</div>
-
-<script>
-  function togglePasswordVisibility(name, event) {
-    event.preventDefault();
-      var passwordInput = document.getElementById(name);
-      var toggleIcon = document.querySelector(".toggle-icon");
-
-      if (passwordInput.type === "password") {
-          passwordInput.type = "text";
-          toggleIcon.classList.add("active");
-      } else {
-          passwordInput.type = "password";
-          toggleIcon.classList.remove("active");
-      }
-  }
-</script>
+</form>

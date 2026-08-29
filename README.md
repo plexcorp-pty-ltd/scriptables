@@ -15,6 +15,23 @@ While Scriptables is platform agnostic, we love PHP and offer full support for L
 
 Scriptables are built using the GIN framework. A popular Golang framework for building web APIs. Scriptables uses both Redis and MySQL. We provide a convenient docker-compose file to run everything.
 
+## SSH keys
+
+Scriptables runs natively on your machine and authenticates to your servers with the SSH keys you
+already have. There is nothing to upload, paste or store - keys never touch the database.
+
+ - Every private key in `~/.ssh` that loads without a passphrase is offered when connecting.
+ - Passphrase protected keys are supported through a running `ssh-agent` (`ssh-add ~/.ssh/id_ed25519`).
+ - All of those public keys are installed on the new SSH user when a server is built.
+ - Set `SCRIPTABLES_SSH_DIR` if your keys live somewhere other than `~/.ssh`.
+ - Set `SCRIPTABLES_SSH_KEYS` (e.g. `id_ed25519,production`) to narrow the keys Scriptables offers.
+   Most SSH servers allow only 6 authentication attempts, so this matters if you keep many keys.
+
+If you have no keys yet, create one with `ssh-keygen -t ed25519`.
+
+Upgrading an existing install? Apply `build/migrations/001_remove_ssh_keys.sql` once to drop the
+now unused `ssh_keys` table and columns.
+
 ## Documentation & Installation
 
 Detailed documentation and instructions on how to install can be found: https://scriptables.gitbook.io/

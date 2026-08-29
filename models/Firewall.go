@@ -5,14 +5,23 @@ package models
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"gorm.io/gorm"
 	"plexcorp.tech/scriptable/sshclient"
 )
 
-func GetRules(client *sshclient.Client) ([]string, error) {
-	firewall_rules := []string{}
+// FirewallRule is one numbered ufw rule. The number is parsed here rather than
+// in the browser so the delete action does not depend on client side string
+// splitting.
+type FirewallRule struct {
+	Number int64
+	Text   string
+}
+
+func GetRules(client *sshclient.Client) ([]FirewallRule, error) {
+	firewall_rules := []FirewallRule{}
 	prefix := "------ firewall rules ---"
 	result, err := client.Script("echo \"" + prefix + "\" && sudo ufw status numbered").SmartOutput()
 	output := string(result)
@@ -48,7 +57,10 @@ func GetRules(client *sshclient.Client) ([]string, error) {
 					rule = parts[0] + "   TO : " + parts[1] + "  << " + ruleType + " >>"
 				}
 
-				firewall_rules = append(firewall_rules, rule)
+				firewall_rules = append(firewall_rules, FirewallRule{
+					Number: parseRuleNumber(rule),
+					Text:   rule,
+				})
 			}
 		}
 
@@ -59,7 +71,24 @@ func GetRules(client *sshclient.Client) ([]string, error) {
 	return firewall_rules, err
 }
 
-func DeleteFirewallRule(db *gorm.DB, server *ServerWithSShKey, ruleNumber int64, rule string) error {
+// parseRuleNumber pulls 7 out of a line beginning "[ 7] ...". Returns 0 when the
+// line is not numbered, which callers treat as an invalid rule.
+func parseRuleNumber(rule string) int64 {
+	open := strings.Index(rule, "[")
+	close := strings.Index(rule, "]")
+	if open < 0 || close < open {
+		return 0
+	}
+
+	number, err := strconv.ParseInt(strings.TrimSpace(rule[open+1:close]), 10, 64)
+	if err != nil {
+		return 0
+	}
+
+	return number
+}
+
+func DeleteFirewallRule(db *gorm.DB, server *ServerDetails, ruleNumber int64, rule string) error {
 	client, err := GetSSHClient(server, false)
 	if err != nil {
 		return err
@@ -75,7 +104,7 @@ func DeleteFirewallRule(db *gorm.DB, server *ServerWithSShKey, ruleNumber int64,
 	return err
 }
 
-func AddFirewallRule(db *gorm.DB, server *ServerWithSShKey, rule string) error {
+func AddFirewallRule(db *gorm.DB, server *ServerDetails, rule string) error {
 	client, err := GetSSHClient(server, false)
 	if err != nil {
 		return err

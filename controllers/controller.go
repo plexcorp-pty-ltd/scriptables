@@ -77,6 +77,7 @@ func (c *Controller) RenderHtml(tpl_name string, ctx gonja.Context, gctx *gin.Co
 	}
 
 	ctx["scriptable_base_url"] = os.Getenv("SCRIPTABLE_URL")
+	ctx["current_year"] = time.Now().Year()
 	ctx["STATUS_QUEUED"] = models.STATUS_QUEUED
 	ctx["STATUS_RUNNING"] = models.STATUS_RUNNING
 	ctx["STATUS_FAILED"] = models.STATUS_FAILED
@@ -183,13 +184,6 @@ func (c *Controller) GetSessionUser(gctx *gin.Context) models.User {
 	var user models.User
 	c.GetDB(gctx).Raw("SELECT id, name, email, verified, team_id FROM users where id = ?", userId).Scan(&user)
 	return user
-}
-
-func (c *Controller) ShowGuide(gctx *gin.Context) {
-	c.Render("general/guide", gonja.Context{
-		"title":     "Scriptables help guide",
-		"highlight": "help",
-	}, gctx)
 }
 
 func (c *Controller) AccessDenied(gctx *gin.Context) {

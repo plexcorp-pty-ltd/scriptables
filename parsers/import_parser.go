@@ -13,7 +13,7 @@ import (
 	"plexcorp.tech/scriptable/models"
 )
 
-func parseServerImport(lineNumber int, script string, db *gorm.DB, server *models.ServerWithSShKey, line string) (string, bool) {
+func parseServerImport(lineNumber int, script string, db *gorm.DB, server *models.ServerDetails, line string) (string, bool) {
 	originalLine := line
 	line = strings.ReplaceAll(line, "SCRIPTABLE::IMPORT", "")
 	line = strings.ReplaceAll(line, " ", "")
@@ -39,7 +39,7 @@ func parseServerImport(lineNumber int, script string, db *gorm.DB, server *model
 	return script, false
 }
 
-func ParseScriptImport(db *gorm.DB, server *models.ServerWithSShKey, script string) (string, bool) {
+func ParseScriptImport(db *gorm.DB, server *models.ServerDetails, script string) (string, bool) {
 	var failed bool = false
 	if strings.Contains(script, "SCRIPTABLE::") {
 		lines := strings.Split(script, "\n")

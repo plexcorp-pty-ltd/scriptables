@@ -1,45 +1,26 @@
-<div class="row">
-  <div class="col-md-12" style="text-align:center">
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-body text-center py-5">
+        <h3 class="mb-1">Testing SSH connection</h3>
+        <div class="text-secondary mb-4 font-monospace">{{serverName}} ({{serverIP}})</div>
 
-        <h4>Testing connection to: {{serverName}} - {{serverIP}}</h4>
-
-            <img src="/static/img/testing-connection.gif" alt="Testing..." />
-  
+        {# Kept outside the swap target so it survives and can be reused by the
+           "Try again" button in the failure fragment. #}
+        <div id="sshtest-progress" class="htmx-indicator">
+          <div class="progress progress-sm mb-4">
+            <div class="progress-bar progress-bar-indeterminate"></div>
+          </div>
+          <p class="text-secondary">
+            Scriptables is connecting with the SSH keys on this machine. Hang tight&hellip;
+          </p>
         </div>
 
+        {# Fires once on load. Success sends back HX-Redirect; failure swaps in
+           an alert fragment with retry and edit actions. #}
+        <div id="sshtest-result" hx-post="/server/test-ssh-ajax/{{id}}" hx-trigger="load" hx-swap="innerHTML"
+          hx-indicator="#sshtest-progress"></div>
+      </div>
+    </div>
   </div>
 </div>
-
-<script>
-
-  fetch("/server/test-ssh-ajax/{{id}}")
-    .then(json => json.json())
-    .then(json => {
-      if(json.status == "failed") {
-         Swal.fire({
-          title: 'Oops! Something went wrong',
-          text: json.message,
-          icon: 'error',
-          confirmButtonText: 'OK'
-        }).then(e => {
-          window.location.href = "/server/update/{{id}}";
-        })
-      } else {
-         Swal.fire({
-          title: 'Success!',
-          text: json.message,
-          icon: 'success',
-          confirmButtonText: 'OK'
-        }).then(e => {
-          window.location.href = "/logs/server/{{id}}";
-        })
-      }
-    }).error(err => {
-      Swal.fire({
-          title: 'Error!',
-          text: 'Connection failed - please check your server configuration such as SSH keys and the server IP address.',
-          icon: 'error',
-          confirmButtonText: 'OK'
-        })
-    });
-</script>

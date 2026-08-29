@@ -1,195 +1,201 @@
+<div class="page-header d-print-none mb-3">
+  <div class="row g-2 align-items-center">
+    <div class="col">
+      <h2 class="page-title">Servers</h2>
+      <div class="text-secondary mt-1">{{numServers}} server(s)</div>
+    </div>
+    <div class="col-auto ms-auto d-print-none">
+      <div class="d-flex gap-2 align-items-center">
+        <input type="hidden" name="view" value="{{view}}" />
+        <div class="btn-group" role="group">
+          <a href="/servers" class="btn btn-icon{% if view != "list" %} active{% endif %}" title="Grid view"
+            data-bs-toggle="tooltip">
+            <i class="ti ti-layout-grid"></i>
+          </a>
+          <a href="/servers?view=list" class="btn btn-icon{% if view == "list" %} active{% endif %}" title="List view"
+            data-bs-toggle="tooltip">
+            <i class="ti ti-list"></i>
+          </a>
+        </div>
 
-<div class="row">
-<div class="col-md-12">
-<h2 class="az-dashboard-title">Servers</h2>
+        <select class="form-select w-auto" name="status" hx-get="/servers" hx-trigger="change"
+          hx-target="#server-results" hx-select="#server-results" hx-swap="outerHTML" hx-push-url="true"
+          hx-include="[name='view']">
+          <option value="all" {% if status=="all" %}selected{% endif %}>All servers</option>
+          <option value="{{STATUS_QUEUED}}" {% if status==STATUS_QUEUED %}selected{% endif %}>Queued builds</option>
+          <option value="{{STATUS_RUNNING}}" {% if status==STATUS_RUNNING %}selected{% endif %}>Running builds</option>
+          <option value="{{STATUS_COMPLETE}}" {% if status==STATUS_COMPLETE %}selected{% endif %}>Active servers</option>
+          <option value="{{STATUS_FAILED}}" {% if status==STATUS_FAILED %}selected{% endif %}>Failed builds</option>
+          <option value="{{STATUS_CONNECTING}}" {% if status==STATUS_CONNECTING %}selected{% endif %}>Testing SSH
+            connection</option>
+        </select>
+
+        <a href="/" class="btn btn-primary">
+          <i class="ti ti-plus me-2"></i>New server
+        </a>
+      </div>
+    </div>
   </div>
-
-  <div class="col-md-8  mb-2 pl-3">
-
-
-        <a href="/servers"><i class="fa fa-th-large" style="color:#67707c;font-size:1.2rem;"></i></a>
-        <a href="/servers?view=list"><i class="fa fa-th-list" style="color:#67707c;font-size:1.2rem"></i></a>
-        <a href="/"><i class="fa fa-plus" style="color:#67707c;font-size:1.2rem"></i></a>
-
-
-
-
-  </div>
-    <div class="col-md-4  mb-2 pr-3" style="text-align:right">
-      <select class="form-control-sm" name="serverStatusFilter" id="serverStatusFilter" onchange="switchStatus()">
-      <option value="all" {% if status=="all" %} selected {% endif %}>All Servers</option>
-      <option value="{{STATUS_QUEUED}}" {% if status==STATUS_QUEUED %} selected {% endif %}>Queued builds</option>
-      <option value="{{STATUS_RUNNING}}" {% if status==STATUS_RUNNING %} selected {% endif %}>Running builds</option>
-      <option value="{{STATUS_COMPLETE}}" {% if status==STATUS_COMPLETE %} selected {% endif %}>Active servers</option>
-      <option value="{{STATUS_FAILED}}" {% if status==STATUS_FAILED %} selected {% endif %}>Failed builds</option>
-      <option value="{{STATUS_CONNECTING}}" {% if status==STATUS_CONNECTING %} selected {% endif %}>Testing SSH connection</option>
-    </select>
-  </div>
-
-
 </div>
-<div class="row">
+
+<div id="server-results">
 {% if numServers == 0 %}
-<div class="col-md-12 bg-white" style="min-height:60vh;">
-<div style="display:flex;height:100%;align-items:center;align-items: center;justify-content: center;">
-<div>
-<svg xmlns="http://www.w3.org/2000/svg" height="200px" viewBox="0 0 576 512" fill="orange"><!--! Font Awesome Free 6.4.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2023 Fonticons, Inc. --><path d="M569.517 440.013C587.975 472.007 564.806 512 527.94 512H48.054c-36.937 0-59.999-40.055-41.577-71.987L246.423 23.985c18.467-32.009 64.72-31.951 83.154 0l239.94 416.028zM288 354c-25.405 0-46 20.595-46 46s20.595 46 46 46 46-20.595 46-46-20.595-46-46-46zm-43.673-165.346l7.418 136c.347 6.364 5.609 11.346 11.982 11.346h48.546c6.373 0 11.635-4.982 11.982-11.346l7.418-136c.375-6.874-5.098-12.654-11.982-12.654h-63.383c-6.884 0-12.356 5.78-11.981 12.654z"/></svg>
-<br /><br />
-<h4>Sorry, no servers found.</h4>
-<p>Click <a href="/">here</a> to build one now.</p>
-</div>
-</div>
+<div class="card">
+  <div class="empty">
+    <div class="empty-icon">
+      <i class="ti ti-server text-secondary" style="font-size:3rem"></i>
+    </div>
+    <p class="empty-title">No servers found</p>
+    <p class="empty-subtitle text-secondary">
+      Build your first server to start deploying sites.
+    </p>
+    <div class="empty-action">
+      <a href="/" class="btn btn-primary">
+        <i class="ti ti-plus me-2"></i>Build a server
+      </a>
+    </div>
+  </div>
 </div>
 {% endif %}
 
 {% if view == "list" and numServers > 0 %}
-<div class="col-md-12">
-            <div class="card card-dashboard-table-six py-4 px-4">
-              <h6 class="card-title az-content-title tx-24 mg-b-5 mg-b-lg-8">Server List</h6>
-              <div class="table-responsive">
-                <table class="table table-borderd">
-   
-                    <tr>
-                      <th>Server name</th>
-                      <th>Server IP</th>
-                      <th>Port</th>
-                      <th>SSH username</th>
-                      <th>Status</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-     
-     
-                 {% for s in servers %}
-                  <tr>
-                    <td>{{s.ServerName}}</td>
-                    <td>{{s.ServerIP}}</td>
-                    <td>{{s.NewSshPort}}</td>
-                    <td>{{s.NewSSHUsername}}</td>
-                    <td>
-                {% if s.Status == STATUS_QUEUED %}
-                    <img title="Build queued" src="/static/icons/queued.png"  style="max-width:32px" alt="Build queued." />
-                 {% endif %}
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-vcenter card-table">
+      <thead>
+        <tr>
+          <th>Server name</th>
+          <th>Server IP</th>
+          <th>Port</th>
+          <th>SSH username</th>
+          <th>Status</th>
+          <th class="w-1">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in servers %}
+        <tr>
+          <td>{{s.ServerName}}</td>
+          <td class="text-secondary">{{s.ServerIP}}</td>
+          <td class="text-secondary">{{s.NewSshPort}}</td>
+          <td class="text-secondary">{{s.NewSSHUsername}}</td>
+          <td>
+            {% if s.Status == STATUS_QUEUED %}
+            <span class="badge bg-secondary-lt">Queued</span>
+            {% endif %}
+            {% if s.Status == STATUS_CONNECTING %}
+            <span class="badge bg-azure-lt">Testing SSH</span>
+            {% endif %}
+            {% if s.Status == STATUS_COMPLETE %}
+            <span class="badge bg-success-lt">Online</span>
+            {% endif %}
+            {% if s.Status == STATUS_RUNNING %}
+            <span class="badge bg-blue-lt">Building</span>
+            {% endif %}
+            {% if s.Status == STATUS_FAILED %}
+            <span class="badge bg-danger-lt">Failed</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="btn-list flex-nowrap">
+              <a href="/logs/server/{{s.ID}}" class="btn btn-icon btn-sm" title="View log" data-bs-toggle="tooltip">
+                <i class="ti ti-terminal-2"></i>
+              </a>
 
-                  {% if s.Status == STATUS_CONNECTING %}
-                    <img title="Testing connection to server" src="/static/icons/sshtest.gif" style="max-width:32px" alt="Testing connection..." />
-                 {% endif %}
+              {% if s.Status == STATUS_COMPLETE %}
+              <a href="/server/firewall/{{s.ID}}" class="btn btn-icon btn-sm" title="Manage firewall"
+                data-bs-toggle="tooltip">
+                <i class="ti ti-flame"></i>
+              </a>
+              {% endif %}
 
-                 {% if s.Status == STATUS_COMPLETE %}
-                    <img title="Successfully built" src="/static/icons/online.png"  style="max-width:32px" alt="successfully built" />
-                 {% endif %}
-               
-                {% if s.Status == STATUS_RUNNING %}
-                    <img title="Currently building server" src="/static/icons/running.gif"  style="max-width:32px" alt="building server..." />
-                 {% endif %}
-               
-                {% if s.Status == STATUS_FAILED %}
-                    <img title="Build failed" src="/static/icons/failed.png"  style="max-width:32px" alt="Build failed" />
-                 {% endif %}
-                    </td>
-
-                    <td>
-                   <a href="/logs/server/{{s.ID}}"><img src="/static/icons/log.png" alt="View Log" title="View Log" style="max-width:32px"/></a>
-                      {% if s.Status == STATUS_FAILED %}
-                      <form method="post" action="/server/retrybuild" style="display:inline;">
-
-                          <button onclick="this.form.submit();" style="background:transparent;border:transparent">
-                          <input type="hidden" name="retryBuildServerId" value="{{s.ID}}" />
-                          <img src="/static/icons/rebuild.png" alt="Retry building server" style="max-width:32px" title="Retry building server" />
-                          </button>
-                      </form>
-                       <a href="/server/update/{{s.ID}}"><svg xmlns="http://www.w3.org/2000/svg" height="32px" viewBox="0 0 576 512"><!--! Font Awesome Free 6.4.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2023 Fonticons, Inc. --><path d="M402.3 344.9l32-32c5-5 13.7-1.5 13.7 5.7V464c0 26.5-21.5 48-48 48H48c-26.5 0-48-21.5-48-48V112c0-26.5 21.5-48 48-48h273.5c7.1 0 10.7 8.6 5.7 13.7l-32 32c-1.5 1.5-3.5 2.3-5.7 2.3H48v352h352V350.5c0-2.1.8-4.1 2.3-5.6zm156.6-201.8L296.3 405.7l-90.4 10c-26.2 2.9-48.5-19.2-45.6-45.6l10-90.4L432.9 17.1c22.9-22.9 59.9-22.9 82.7 0l43.2 43.2c22.9 22.9 22.9 60 .1 82.8zM460.1 174L402 115.9 216.2 301.8l-7.3 65.3 65.3-7.3L460.1 174zm64.8-79.7l-43.2-43.2c-4.1-4.1-10.8-4.1-14.8 0L436 82l58.1 58.1 30.9-30.9c4-4.2 4-10.8-.1-14.9z"/></svg></a>
-
-                      {% endif %}
-                    </td>
-                  </tr>
-                 {% endfor %}
-
-                  </tbody>
-                </table>
-              </div>
+              {% if s.Status == STATUS_FAILED %}
+              <form method="post" action="/server/retrybuild">
+                <input type="hidden" name="_csrf_token" value="{{_csrf_token}}" />
+                <input type="hidden" name="retryBuildServerId" value="{{s.ID}}" />
+                <button type="submit" class="btn btn-icon btn-sm" title="Retry build" data-bs-toggle="tooltip">
+                  <i class="ti ti-reload"></i>
+                </button>
+              </form>
+              <a href="/server/update/{{s.ID}}" class="btn btn-icon btn-sm" title="Edit server"
+                data-bs-toggle="tooltip">
+                <i class="ti ti-edit"></i>
+              </a>
+              {% endif %}
             </div>
-          </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
 
 {% else %}
 
-
-{% for s in servers %}
-
-<div class="col-md-6 mb-3">
-              <div class="card card-dashboard-pageviews shadow px-4" style="border-radius:10px;border:none;">
-                <div class="card-header">
-                  <h3>{{s.ServerName}} 
-
-                {% if s.Status == STATUS_QUEUED %}
-                    <img title="Build queued" src="/static/icons/queued.png"  style="max-width:38px" alt="Build queued." />
-                 {% endif %}
-
-                  {% if s.Status == STATUS_CONNECTING %}
-                    <img title="Testing connection to server" src="/static/icons/sshtest.gif" style="max-width:38px" alt="Testing connection..." />
-                 {% endif %}
-
-                 {% if s.Status == STATUS_COMPLETE %}
-                    <img title="Successfully built" src="/static/icons/online.png"  style="max-width:38px" alt="successfully built" />
-                 {% endif %}
-               
-                {% if s.Status == STATUS_RUNNING %}
-                    <img title="Currently building server" src="/static/icons/running.gif"  style="max-width:38px" alt="building server..." />
-                 {% endif %}
-               
-                {% if s.Status == STATUS_FAILED %}
-                    <img title="Build failed" src="/static/icons/failed.png"  style="max-width:38px" alt="Build failed" />
-                 {% endif %}
-
-                  </h3>
-                  <p class="card-text">{{s.NewSSHUsername}}@{{s.ServerIP}}:{{s.NewSshPort}}</p>
-                </div><!-- card-header -->
-                <div class="card-body">
-                  <div class="az-list-item">
-                    <div>
-                      <h6>Actions</h6>
-                     
-                      <a href="/logs/server/{{s.ID}}"><img src="/static/icons/log.png" alt="View Log" title="View Log" /></a>
-                      {% if s.Status == STATUS_FAILED %}
-                      <form method="post" action="/server/retrybuild" style="display:inline;padding-left:5px;">
-
-                          <button onclick="this.form.submit();" style="background:transparent;border:transparent">
-                          <input type="hidden" name="retryBuildServerId" value="{{s.ID}}" />
-                          <img src="/static/icons/rebuild.png" alt="Retry building server" title="Retry building server" />
-                          </button>
-                      </form>
-                  
-                     <a href="/server/update/{{s.ID}}"><svg xmlns="http://www.w3.org/2000/svg" height="44px" viewBox="0 0 576 512"><!--! Font Awesome Free 6.4.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2023 Fonticons, Inc. --><path d="M402.3 344.9l32-32c5-5 13.7-1.5 13.7 5.7V464c0 26.5-21.5 48-48 48H48c-26.5 0-48-21.5-48-48V112c0-26.5 21.5-48 48-48h273.5c7.1 0 10.7 8.6 5.7 13.7l-32 32c-1.5 1.5-3.5 2.3-5.7 2.3H48v352h352V350.5c0-2.1.8-4.1 2.3-5.6zm156.6-201.8L296.3 405.7l-90.4 10c-26.2 2.9-48.5-19.2-45.6-45.6l10-90.4L432.9 17.1c22.9-22.9 59.9-22.9 82.7 0l43.2 43.2c22.9 22.9 22.9 60 .1 82.8zM460.1 174L402 115.9 216.2 301.8l-7.3 65.3 65.3-7.3L460.1 174zm64.8-79.7l-43.2-43.2c-4.1-4.1-10.8-4.1-14.8 0L436 82l58.1 58.1 30.9-30.9c4-4.2 4-10.8-.1-14.9z"/></svg></a>
-
-                      {% endif %}
-
-                      {% if s.Status == STATUS_COMPLETE %}
-                     <a href="/server/firewall/{{s.ID}}" title="Manage firewall"><img src="/static/icons/firewall.png" height="42px" style="vertical-align:top" /></a>
-
-                      {% endif %}
-                    </div>
-                    <div>
-                      <img src="/static/icons/{{s.ServerType}}.svg" style="max-width:100px" />
-                    </div>
-                  </div><!-- list-group-item -->
-      
-                </div><!-- card-body -->
-              </div><!-- card -->
-
+<div class="row row-cards">
+  {% for s in servers %}
+  <div class="col-md-6 col-xl-4">
+    <div class="card h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-start">
+          <div class="flex-fill">
+            <h3 class="card-title mb-1">{{s.ServerName}}</h3>
+            <div class="text-secondary font-monospace small">
+              {{s.NewSSHUsername}}@{{s.ServerIP}}:{{s.NewSshPort}}
             </div>
+            <div class="mt-2">
+              {% if s.Status == STATUS_QUEUED %}
+              <span class="badge bg-secondary-lt">Build queued</span>
+              {% endif %}
+              {% if s.Status == STATUS_CONNECTING %}
+              <span class="badge bg-azure-lt">Testing SSH connection</span>
+              {% endif %}
+              {% if s.Status == STATUS_COMPLETE %}
+              <span class="badge bg-success-lt">Online</span>
+              {% endif %}
+              {% if s.Status == STATUS_RUNNING %}
+              <span class="badge bg-blue-lt">Building</span>
+              {% endif %}
+              {% if s.Status == STATUS_FAILED %}
+              <span class="badge bg-danger-lt">Build failed</span>
+              {% endif %}
+            </div>
+          </div>
+          <img src="/static/icons/{{s.ServerType}}.svg" alt="{{s.ServerType}}" style="max-width:64px" class="ms-3" />
+        </div>
+      </div>
 
+      <div class="card-footer">
+        <div class="btn-list">
+          <a href="/logs/server/{{s.ID}}" class="btn btn-sm">
+            <i class="ti ti-terminal-2 me-1"></i>Log
+          </a>
 
-      {% endfor %}
-{% endif %}
+          {% if s.Status == STATUS_COMPLETE %}
+          <a href="/server/firewall/{{s.ID}}" class="btn btn-sm">
+            <i class="ti ti-flame me-1"></i>Firewall
+          </a>
+          {% endif %}
+
+          {% if s.Status == STATUS_FAILED %}
+          <form method="post" action="/server/retrybuild">
+            <input type="hidden" name="_csrf_token" value="{{_csrf_token}}" />
+            <input type="hidden" name="retryBuildServerId" value="{{s.ID}}" />
+            <button type="submit" class="btn btn-sm">
+              <i class="ti ti-reload me-1"></i>Retry
+            </button>
+          </form>
+          <a href="/server/update/{{s.ID}}" class="btn btn-sm">
+            <i class="ti ti-edit me-1"></i>Edit
+          </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
   </div>
+  {% endfor %}
+</div>
+{% endif %}
 
-  <script>
-    function switchStatus() {
-        var dropdown = document.getElementById("serverStatusFilter");
-        var selectedValue = dropdown.value;
-        if (selectedValue !== "") {
-            window.location.href = "/servers?status=" + selectedValue;
-        }
-    }
-</script>
+</div>
