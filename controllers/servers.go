@@ -270,9 +270,6 @@ func (c *Controller) ShowTestConnectionLoader(gctx *gin.Context) {
 	}, gctx)
 }
 
-// TestSSHConnection is called by htmx from the connection test page. On success
-// it answers with an HX-Redirect so the browser moves straight to the build log;
-// on failure it returns an inline alert fragment explaining what went wrong.
 func (c *Controller) TestSSHConnection(gctx *gin.Context) {
 	id, _ := strconv.ParseInt(gctx.Param("id"), 10, 64)
 	sessUser := c.GetSessionUser(gctx)
@@ -306,8 +303,6 @@ func (c *Controller) TestSSHConnection(gctx *gin.Context) {
 
 	connection.Close()
 
-	// An existing server is left exactly as it is. Marking it complete keeps the
-	// build daemon, which only picks up queued servers, away from it.
 	if models.IsExistingServer(server.ServerType) {
 		db.Exec("UPDATE servers SET status=? WHERE id=?", models.STATUS_COMPLETE, server.ID)
 		c.FlashSuccess(gctx, "Connected to "+server.ServerName+". The server was left untouched.")
@@ -342,9 +337,6 @@ func (c *Controller) FirewallRules(gctx *gin.Context) {
 	}, gctx)
 }
 
-// renderFirewallRules returns the rules table fragment that htmx swaps into the
-// page. Every firewall action ends here so the list always reflects the real
-// ufw state rather than something patched together in the browser.
 func (c *Controller) renderFirewallRules(gctx *gin.Context, serverID int64, successMsg string, actionErr error) {
 	db := c.GetDB(gctx)
 	sessUser := c.GetSessionUser(gctx)
@@ -368,8 +360,6 @@ func (c *Controller) renderFirewallRules(gctx *gin.Context, serverID int64, succ
 		rules = fetched
 	}
 
-	// The action's own failure is what the user needs to see; a follow up fetch
-	// error would otherwise mask it.
 	if actionErr != nil {
 		vars["errorMsg"] = actionErr.Error()
 	} else if fetchErr != nil {
@@ -426,9 +416,6 @@ func (c *Controller) DeleteFirewallRule(gctx *gin.Context) {
 	c.renderFirewallRules(gctx, serverID, "Successfully deleted the rule.", nil)
 }
 
-// buildUfwRule composes a ufw rule from the form fields. The browser used to
-// assemble this string itself; doing it here keeps the shell command in one
-// place and lets the fields be validated.
 func buildUfwRule(allowBlock, direction, ip, port, protocol string) string {
 	var rule string
 	if direction == "outgoing" {

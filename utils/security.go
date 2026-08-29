@@ -14,9 +14,6 @@ import (
 
 var RANDOM_BYTES = []byte{35, 46, 57, 24, 85, 35, 24, 74, 87, 35, 88, 98, 66, 32, 14, 05}
 
-// cipherSecret reads the key on every call rather than at package init. Package
-// level vars are initialised before main() runs, which would capture an empty
-// key before the .env file has been loaded.
 func cipherSecret() []byte {
 	return []byte(os.Getenv("ENCRYPTION_KEY"))
 }

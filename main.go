@@ -52,9 +52,6 @@ func RunJobs() {
 
 }
 
-// loadEnv reads the .env file sitting next to the binary or in the working
-// directory. Real environment variables always win, so a value exported in the
-// shell (or set by docker compose) overrides the file.
 func loadEnv() {
 	path := os.Getenv("SCRIPTABLES_ENV_FILE")
 	if path == "" {
@@ -67,8 +64,6 @@ func loadEnv() {
 			return
 		}
 
-		// Running under docker compose the variables come from env_file instead,
-		// so a missing .env on disk is not an error.
 		fmt.Println("No", path, "file found, relying on the environment.")
 	}
 }
@@ -76,8 +71,6 @@ func loadEnv() {
 func main() {
 	loadEnv()
 
-	// gin reads GIN_MODE in its own init(), which runs before .env is loaded, so
-	// apply it here instead.
 	if mode := os.Getenv("GIN_MODE"); mode != "" {
 		gin.SetMode(mode)
 	}
@@ -109,9 +102,6 @@ func main() {
 	router := gin.Default()
 	router.StaticFS("/static", http.Dir("./static"))
 
-	// An empty list means trust no proxy, which is the right default when
-	// Scriptables runs locally. Passing strings.Split("", ",") would hand gin a
-	// single empty string and fail to parse.
 	var trustedProxies []string
 	for _, ip := range strings.Split(os.Getenv("ALLOWED_IPS"), ",") {
 		if ip = strings.TrimSpace(ip); ip != "" {

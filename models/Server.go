@@ -66,8 +66,6 @@ type ServerDetails struct {
 	TeamId            int64
 }
 
-// SERVER_TYPE_EXISTING connects to a server that is already set up. No
-// scriptables are run against it, so nothing is installed or reconfigured.
 const SERVER_TYPE_EXISTING = "existing"
 
 func IsExistingServer(serverType string) bool {
@@ -192,13 +190,6 @@ func ValidateForm(gctx *gin.Context, s *Server) []string {
 	return errors
 }
 
-// validateExistingServerForm handles the "connect existing" flow. We only need
-// enough detail to open an SSH session, so none of the build options apply.
-//
-// The new SSH user and port are mirrored from the ones supplied. Everything
-// downstream (firewall, sites, crons) connects with the New* fields because a
-// built server moves onto them after hardening, and an existing server has no
-// such second identity.
 func validateExistingServerForm(gctx *gin.Context, s *Server) []string {
 	errors := []string{}
 

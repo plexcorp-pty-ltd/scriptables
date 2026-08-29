@@ -10,9 +10,6 @@ import (
 	"plexcorp.tech/scriptable/utils"
 )
 
-// GetSSHClient connects to a server using the SSH keys already present on this
-// machine (~/.ssh, plus anything loaded into a running ssh-agent). Scriptables
-// runs natively, so there are no keys to store or manage in the app itself.
 func GetSSHClient(server *ServerDetails, intialConnect bool) (*sshclient.Client, error) {
 	if intialConnect {
 		return sshclient.DialWithLocalKeys(server.ServerIP+":"+strconv.Itoa(server.SshPort), server.SSHUsername)

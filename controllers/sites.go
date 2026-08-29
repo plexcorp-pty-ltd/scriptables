@@ -268,9 +268,6 @@ func (c *Controller) CreateSiteDeployKey(gctx *gin.Context) {
 
 }
 
-// GenerateDeployKey creates the repository deploy key on the target server and
-// returns an HTML fragment for htmx: either the key itself plus the continue
-// button, or an error with a retry action.
 func (c *Controller) GenerateDeployKey(gctx *gin.Context) {
 	siteId, e := strconv.ParseInt(gctx.PostForm("siteId"), 10, 64)
 	sessUser := c.GetSessionUser(gctx)

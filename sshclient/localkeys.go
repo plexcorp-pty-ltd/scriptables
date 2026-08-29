@@ -13,7 +13,6 @@ import (
 	"golang.org/x/crypto/ssh/agent"
 )
 
-// Files that live in ~/.ssh but are never private keys.
 var nonKeyFiles = map[string]bool{
 	"authorized_keys":  true,
 	"authorized_keys2": true,
@@ -24,9 +23,6 @@ var nonKeyFiles = map[string]bool{
 	"rc":               true,
 }
 
-// SshDir returns the directory Scriptables reads SSH keys from. Scriptables runs
-// natively on your machine, so it simply re-uses whatever keys you already have.
-// Set SCRIPTABLES_SSH_DIR to point at a different directory.
 func SshDir() string {
 	if dir := os.Getenv("SCRIPTABLES_SSH_DIR"); dir != "" {
 		return dir
@@ -53,7 +49,6 @@ func isCandidateKeyFile(name string) bool {
 	return true
 }
 
-// LocalKey is a usable key pair found in the SSH directory.
 type LocalKey struct {
 	Name      string // file name of the private key, e.g. "id_ed25519"
 	Path      string // full path to the private key
@@ -62,9 +57,6 @@ type LocalKey struct {
 	Encrypted bool   // true when the private key is passphrase protected
 }
 
-// preferredOrder puts the conventional key names first. SSH servers cap the
-// number of authentication attempts (OpenSSH allows 6 by default), so the keys
-// most likely to be the right one are offered first.
 var preferredOrder = []string{"id_ed25519", "id_ecdsa", "id_rsa", "id_dsa", "identity"}
 
 func rank(name string) int {
@@ -76,8 +68,6 @@ func rank(name string) int {
 	return len(preferredOrder)
 }
 
-// selectedKeyNames honours SCRIPTABLES_SSH_KEYS, a comma separated list of key
-// file names. Set it when you have more keys than the server will let us try.
 func selectedKeyNames() map[string]bool {
 	raw := os.Getenv("SCRIPTABLES_SSH_KEYS")
 	if raw == "" {
@@ -99,9 +89,6 @@ func selectedKeyNames() map[string]bool {
 	return selected
 }
 
-// LocalKeys lists every private key in the SSH directory that can be loaded
-// without a passphrase. Passphrase protected keys are reported with Encrypted
-// set so the UI can explain why they are unavailable - use an ssh-agent for those.
 func LocalKeys() ([]LocalKey, error) {
 	dir := SshDir()
 	entries, err := os.ReadDir(dir)
@@ -157,8 +144,6 @@ func LocalKeys() ([]LocalKey, error) {
 	return keys, nil
 }
 
-// agentSigners returns the signers held by a running ssh-agent, if there is one.
-// This is how passphrase protected keys are supported.
 func agentSigners() []ssh.Signer {
 	sock := os.Getenv("SSH_AUTH_SOCK")
 	if sock == "" {
@@ -178,8 +163,6 @@ func agentSigners() []ssh.Signer {
 	return signers
 }
 
-// LocalSigners returns every key we can authenticate with: the ssh-agent keys
-// first (they cover passphrase protected keys) followed by the on disk keys.
 func LocalSigners() ([]ssh.Signer, error) {
 	signers := agentSigners()
 
@@ -202,8 +185,6 @@ func LocalSigners() ([]ssh.Signer, error) {
 	return signers, nil
 }
 
-// LocalPublicKeys returns the authorized_keys lines for every key we can use.
-// These get installed on the servers Scriptables builds.
 func LocalPublicKeys() []string {
 	seen := map[string]bool{}
 	pubKeys := []string{}
@@ -228,8 +209,6 @@ func LocalPublicKeys() []string {
 		}
 	}
 
-	// Passphrase protected keys have no signer, but their .pub file still tells
-	// us what to install on the server.
 	for _, key := range keys {
 		if key.Signer != nil {
 			continue
@@ -248,8 +227,6 @@ func LocalPublicKeys() []string {
 	return pubKeys
 }
 
-// dialTimeout caps how long we wait for a TCP connection and handshake.
-// Override with SCRIPTABLES_SSH_TIMEOUT (e.g. "5s", "30s").
 func dialTimeout() time.Duration {
 	if raw := os.Getenv("SCRIPTABLES_SSH_TIMEOUT"); raw != "" {
 		if d, err := time.ParseDuration(raw); err == nil && d > 0 {
@@ -260,8 +237,6 @@ func dialTimeout() time.Duration {
 	return 15 * time.Second
 }
 
-// DialWithLocalKeys connects to addr, offering every SSH key available on this
-// machine. The server picks the one it accepts.
 func DialWithLocalKeys(addr, user string) (*Client, error) {
 	signers, err := LocalSigners()
 	if err != nil {
@@ -274,8 +249,6 @@ func DialWithLocalKeys(addr, user string) (*Client, error) {
 			ssh.PublicKeys(signers...),
 		},
 		HostKeyCallback: ssh.HostKeyCallback(func(hostname string, remote net.Addr, key ssh.PublicKey) error { return nil }),
-		// Without this a wrong or unroutable IP hangs the request forever, which
-		// leaves the connection test and firewall pages spinning indefinitely.
 		Timeout: dialTimeout(),
 	}
 

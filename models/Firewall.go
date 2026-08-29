@@ -12,9 +12,6 @@ import (
 	"plexcorp.tech/scriptable/sshclient"
 )
 
-// FirewallRule is one numbered ufw rule. The number is parsed here rather than
-// in the browser so the delete action does not depend on client side string
-// splitting.
 type FirewallRule struct {
 	Number int64
 	Text   string
@@ -71,8 +68,6 @@ func GetRules(client *sshclient.Client) ([]FirewallRule, error) {
 	return firewall_rules, err
 }
 
-// parseRuleNumber pulls 7 out of a line beginning "[ 7] ...". Returns 0 when the
-// line is not numbered, which callers treat as an invalid rule.
 func parseRuleNumber(rule string) int64 {
 	open := strings.Index(rule, "[")
 	close := strings.Index(rule, "]")

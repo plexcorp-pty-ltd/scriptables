@@ -14,7 +14,6 @@
     <link rel="stylesheet" href="/static/tabler/css/tabler-icons.min.css" />
 
     <script>
-        // Applied before first paint so the page never flashes the wrong theme.
         try {
             var theme = localStorage.getItem("scriptables-theme") || "light";
             document.documentElement.setAttribute("data-bs-theme", theme);
